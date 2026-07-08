@@ -7,10 +7,17 @@ Run with:
 
 import streamlit as st
 
+from app_theme import inject_app_theme
 from database.connection import create_db_and_tables
 from models.user import UserRole
 
-st.set_page_config(page_title="Kautex Hackaton Dashboard", page_icon=":material/space_dashboard:", layout="wide")
+st.set_page_config(
+    page_title="Kautex Engineering Planning",
+    page_icon=":material/space_dashboard:",
+    layout="wide",
+    initial_sidebar_state="auto",
+)
+inject_app_theme()
 
 # Make sure the database and tables exist before the app is used.
 create_db_and_tables()
