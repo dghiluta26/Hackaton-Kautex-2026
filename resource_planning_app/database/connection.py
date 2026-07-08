@@ -30,4 +30,6 @@ def get_session() -> Session:
 
 def create_db_and_tables() -> None:
     """Create all tables defined by SQLModel models, if they don't exist yet."""
+    import models  # noqa: F401  (registers every table with SQLModel's metadata)
+
     SQLModel.metadata.create_all(engine)

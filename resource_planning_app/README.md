@@ -49,13 +49,28 @@ is created automatically if it doesn't exist.
 python -m database.init_db
 ```
 
-### 4. Run the Streamlit app
+### 4. Seed an admin account
+
+Creates one admin login for testing (safe to re-run — skips if it already exists):
+
+```bash
+python -m database.seed
+```
+
+This prints the seeded username/password to the console. Change it before
+using the app outside of local testing.
+
+### 5. Run the Streamlit app
 
 ```bash
 streamlit run app.py
 ```
 
-The app will open in your browser. Use the sidebar to navigate between pages.
+The app opens on the login page. Log in with the seeded admin account, or
+use "Sign up" to self-register a new employee account. Admins see an extra
+"Employees" page; both roles see Dashboard, Topics, Allocation Matrix, and
+Reports (this split will be refined once the admin/employee dashboard
+designs are finalized).
 
 ## Project Structure
 
@@ -69,7 +84,8 @@ resource_planning_app/
 │
 ├── database/                # Database connection & initialization
 │   ├── connection.py
-│   └── init_db.py
+│   ├── init_db.py
+│   └── seed.py               # seeds one admin account for testing
 │
 ├── models/                  # SQLModel table definitions
 │   ├── employee.py
@@ -78,20 +94,24 @@ resource_planning_app/
 │   ├── location.py
 │   ├── topic.py
 │   ├── allocation.py
-│   └── cost_item.py
+│   ├── cost_item.py
+│   └── user.py                # login accounts (username, password hash, role)
 │
 ├── services/                 # Data access layer (CRUD, placeholders for now)
 │   ├── employee_service.py
 │   ├── topic_service.py
 │   ├── allocation_service.py
-│   └── cost_service.py
+│   ├── cost_service.py
+│   └── auth_service.py       # fully implemented: hashing, register, login
 │
-├── pages/                    # Streamlit multipage app pages
-│   ├── 1_General_Dashboard.py
-│   ├── 2_Employees.py
-│   ├── 3_Topics.py
-│   ├── 4_Allocation_Matrix.py
-│   └── 5_Reports.py
+├── app_pages/                # Streamlit multipage app pages
+│   ├── login.py
+│   ├── register.py
+│   ├── dashboard.py
+│   ├── employees.py          # admin only
+│   ├── topics.py
+│   ├── allocation_matrix.py
+│   └── reports.py
 │
 ├── utils/                    # Pure helper functions (cost/utilization math)
 │   └── calculations.py
