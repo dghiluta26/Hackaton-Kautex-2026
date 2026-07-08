@@ -1,8 +1,12 @@
-"""Employees page: manage employee records."""
+"""Employees page: manage employee records. Admins only."""
 
 import streamlit as st
 
-st.set_page_config(page_title="Employees", layout="wide")
+from models.user import UserRole
+
+if st.session_state.user.role != UserRole.ADMIN:
+    st.error("You don't have access to this page.")
+    st.stop()
 
 st.title("Employees")
 st.caption("View and manage employees, their teams, departments, and locations.")

@@ -2,8 +2,6 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="General Dashboard", layout="wide")
-
 st.title("General Dashboard")
 st.caption("High-level overview of employees, topics, cost, and utilization.")
 

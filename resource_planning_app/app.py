@@ -1,5 +1,6 @@
 """Main entry point for the Resource Planning & Cost Management app.
 
+Handles database setup, login/session state, and role-based navigation.
 Run with:
     streamlit run app.py
 """
@@ -7,48 +8,57 @@ Run with:
 import streamlit as st
 
 from database.connection import create_db_and_tables
+from models.user import UserRole
 
-st.set_page_config(page_title="Resource Planning App", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Kautex Hackaton Dashboard", page_icon=":material/space_dashboard:", layout="wide")
 
 # Make sure the database and tables exist before the app is used.
 create_db_and_tables()
 
-st.title("Resource Planning & Cost Management")
+# --- Session state defaults ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user" not in st.session_state:
+    st.session_state.user = None
+if "auth_view" not in st.session_state:
+    st.session_state.auth_view = "login"
 
-st.markdown(
-    """
-    This application helps plan and manage resources across teams and topics/projects.
-    It tracks employees, teams, departments, locations, topic allocations, and the
-    resulting costs, so that planning and reporting can happen in one place.
-    """
-)
+# --- Logged-out: show only login or register ---
+if not st.session_state.logged_in:
+    if st.session_state.auth_view == "register":
+        auth_pages = [st.Page("app_pages/register.py", title="Sign up", icon=":material/person_add:")]
+    else:
+        auth_pages = [st.Page("app_pages/login.py", title="Log in", icon=":material/lock:")]
 
-st.subheader("Navigation")
-st.markdown(
-    """
-    Use the sidebar to navigate between pages:
+    nav = st.navigation(auth_pages, position="hidden")
+    nav.run()
+    st.stop()
 
-    - **General Dashboard** — key metrics and charts overview
-    - **Employees** — manage employee records
-    - **Topics** — manage topics/projects
-    - **Allocation Matrix** — allocate employees to topics and check utilization
-    - **Reports** — executive summary and detailed cost/allocation reports
-    """
-)
+# --- Logged-in: role-based navigation ---
+role = st.session_state.user.role
 
-st.divider()
+shared_pages = [
+    st.Page("app_pages/dashboard.py", title="General dashboard", icon=":material/space_dashboard:"),
+    st.Page("app_pages/topics.py", title="Topics", icon=":material/folder:"),
+    st.Page("app_pages/allocation_matrix.py", title="Allocation matrix", icon=":material/grid_on:"),
+    st.Page("app_pages/reports.py", title="Reports", icon=":material/bar_chart:"),
+]
+admin_only_pages = [
+    st.Page("app_pages/employees.py", title="Employees", icon=":material/group:"),
+]
 
-# --- Basic dashboard placeholders ---
-st.subheader("Quick Overview")
+# TODO: once the admin/employee dashboard prototypes arrive, split shared_pages
+# further instead of giving both roles the same four pages.
+pages = {"": shared_pages, "Admin": admin_only_pages} if role == UserRole.ADMIN else {"": shared_pages}
 
-col1, col2, col3, col4 = st.columns(4)
-with col1:
-    st.metric("Total Employees", "—")
-with col2:
-    st.metric("Total Topics", "—")
-with col3:
-    st.metric("Total Cost", "—")
-with col4:
-    st.metric("Overallocated Employees", "—")
+with st.sidebar:
+    st.write(f"**{st.session_state.user.username}**")
+    st.caption(role.value.capitalize())
+    if st.button("Log out", icon=":material/logout:", width="stretch"):
+        st.session_state.logged_in = False
+        st.session_state.user = None
+        st.session_state.auth_view = "login"
+        st.rerun()
 
-st.info("Detailed metrics and charts will be available on the General Dashboard page.")
+nav = st.navigation(pages)
+nav.run()

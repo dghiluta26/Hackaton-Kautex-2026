@@ -2,8 +2,6 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="Allocation Matrix", layout="wide")
-
 st.title("Allocation Matrix")
 st.caption("Allocate employees to topics and review utilization and cost.")
 

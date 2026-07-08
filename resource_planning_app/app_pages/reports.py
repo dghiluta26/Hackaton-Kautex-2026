@@ -2,8 +2,6 @@
 
 import streamlit as st
 
-st.set_page_config(page_title="Reports", layout="wide")
-
 st.title("Reports")
 st.caption("Executive summary and detailed breakdowns by topic, team, and employee.")
 
