@@ -22,15 +22,26 @@ def get_all_topics() -> list[Topic]:
 
 
 def get_topic_by_id(topic_id: int) -> Topic | None:
-    # TODO: return a single topic by id, or None if not found
-    raise NotImplementedError
+    with get_session() as session:
+        return session.get(Topic, topic_id)
 
 
-def update_topic(topic_id: int, updated_data: dict) -> Topic:
-    # TODO: update an existing topic's fields
-    raise NotImplementedError
+def update_topic(topic_id: int, updated_data: dict) -> Topic | None:
+    with get_session() as session:
+        topic = session.get(Topic, topic_id)
+        if topic is None:
+            return None
+        for key, value in updated_data.items():
+            setattr(topic, key, value)
+        session.add(topic)
+        session.commit()
+        session.refresh(topic)
+        return topic
 
 
 def delete_topic(topic_id: int) -> None:
-    # TODO: delete a topic from the database
-    raise NotImplementedError
+    with get_session() as session:
+        topic = session.get(Topic, topic_id)
+        if topic is not None:
+            session.delete(topic)
+            session.commit()
