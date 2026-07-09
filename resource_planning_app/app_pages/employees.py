@@ -20,9 +20,32 @@ render_kautex_header(
     "Admin",
 )
 
+all_employees = get_all_employees()
+
+# --- NEW: CORPORATE METRICS HIGHLIGHT ROW ---
+# This mirrors the clean executive dashboard summary cards seen on your landing page.
+if len(all_employees) > 0:
+    total_staff = len(all_employees)
+    active_staff = sum(1 for emp in all_employees if str(emp.status).strip().lower() == "active")
+
+    # Calculate averages safely avoiding any division by zero
+    avg_rate = sum(float(emp.hourly_rate or 0.0) for emp in all_employees) / total_staff
+    total_capacity = sum(float(emp.available_hours_per_year or 0.0) for emp in all_employees)
+
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    with m_col1:
+        st.metric(label="Total Registries", value=f"{total_staff} Headcount")
+    with m_col2:
+        st.metric(label="Active Staff Status", value=f"{active_staff} Active", delta=f"{total_staff - active_staff} Non-Active", delta_color="off")
+    with m_col3:
+        st.metric(label="Average Standard Rate", value=f"€ {avg_rate:.2f} / hr")
+    with m_col4:
+        st.metric(label="Gross Planned Capacity", value=f"{total_capacity:,.0f} hrs/yr")
+
+    st.divider()
+
 # --- 1. Display the Current Database Table ---
 st.subheader("Employee List")
-all_employees = get_all_employees()
 
 if len(all_employees) > 0:
     # Convert the SQL database objects into a clean Pandas dataframe for Streamlit
@@ -82,7 +105,6 @@ else:
 
     col1, col2 = st.columns(2)
     with col1:
-        # Appending {selected_id} forces Streamlit to rebuild inputs when selecting a different employee
         edit_name = st.text_input("Name:", employee.name, key=f"edit_emp_name_{selected_id}")
         edit_status = st.text_input("Status:", employee.status or "", key=f"edit_emp_status_{selected_id}")
         edit_manager = st.text_input("Manager:", employee.manager or "", key=f"edit_emp_manager_{selected_id}")

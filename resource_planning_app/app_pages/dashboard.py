@@ -161,10 +161,16 @@ render_hero_header(
     "Demo Kautex Hackathon (General dashboard)",
 )
 
-from services.employee_service import get_all_employees
-from services.topic_service import get_all_topics
-from services.allocation_service import get_all_allocations
-
+# --- SIDEBAR INTERACTIVE WHAT-IF SIMULATIONS ---
+st.sidebar.header("Executive Simulations")
+rate_multiplier = st.sidebar.slider(
+    "Labor Rate Adjustment (%)",
+    min_value=80,
+    max_value=150,
+    value=100,
+    step=5,
+    help="Simulate the business cost impact of macro labor rate changes or currency adjustments."
+)
 
 # --- 1. Fetch Real Data ---
 db_employees = get_all_employees()
@@ -178,27 +184,30 @@ if not db_employees:
 # --- 2. Calculate Live Analytics ---
 employee_data = []
 total_internal_cost = 0
+base_internal_cost = 0
 
 for emp in db_employees:
-    # Find all allocations for this specific employee
     emp_allocs = [a for a in db_allocations if a.employee_id == emp.id]
-
-    # Calculate total utilization percentage (e.g., 20% + 50% = 70%)
     total_util = sum([a.allocation_percentage for a in emp_allocs])
 
-    # Calculate cost: (Hours * Rate) * (Utilization / 100)
-    emp_cost = (emp.available_hours_per_year * emp.hourly_rate) * (total_util / 100)
-    total_internal_cost += emp_cost
+    # Dynamic Simulation Modification Applied to calculations
+    simulated_rate = float(emp.hourly_rate or 0.0) * (rate_multiplier / 100)
+
+    emp_cost_simulated = (emp.available_hours_per_year * simulated_rate) * (total_util / 100)
+    emp_cost_base = (emp.available_hours_per_year * emp.hourly_rate) * (total_util / 100)
+
+    total_internal_cost += emp_cost_simulated
+    base_internal_cost += emp_cost_base
 
     employee_data.append({
         "employee": emp.name,
         "team": emp.team_id or "Unassigned",
-        "department": emp.department_id or "Unassigned",
+        "department": f"Dept {emp.department_id}" if emp.department_id else "Unassigned",
         "location": emp.location_id or "Unassigned",
         "hours_per_year": emp.available_hours_per_year,
-        "hourly_rate": emp.hourly_rate,
+        "hourly_rate": simulated_rate,
         "total_utilization": total_util,
-        "allocated_internal_cost": emp_cost,
+        "allocated_internal_cost": emp_cost_simulated,
         "risk": "Overallocated" if total_util > 100 else "OK"
     })
 
@@ -208,21 +217,49 @@ avg_utilization = df_employees["total_utilization"].mean() if not df_employees.e
 
 # --- 3. Top Metrics Row ---
 with st.container(horizontal=True):
-    st.metric("Total employees", f"{len(db_employees)}", border=True)
-    st.metric("Total topics", f"{len(db_topics)}", border=True)
-    st.metric("Average utilization", f"{avg_utilization:.0f}%", border=True)
-    st.metric("Total internal cost", f"$ {total_internal_cost:,.0f}", border=True)
-    st.metric("Overallocated employees", f"{overallocated_count}", delta="needs review" if overallocated_count else "clear", border=True)
+    st.metric("Total employees", f"{len(db_employees)}")
+    st.metric("Total topics", f"{len(db_topics)}")
+    st.metric("Average utilization", f"{avg_utilization:.0f}%")
 
-# --- 4. Live Utilization Chart ---
-st.markdown("### Utilization by Employee")
-if not df_employees.empty:
-    st.altair_chart(utilization_chart(df_employees), use_container_width=True)
+    # Calculate difference context for delta display
+    cost_delta = total_internal_cost - base_internal_cost
+    st.metric(
+        "Total internal cost",
+        f"$ {total_internal_cost:,.0f}",
+        delta=f"$ {cost_delta:+,.0f} Shift" if rate_multiplier != 100 else None,
+        delta_color="inverse"
+    )
 
-# --- 5. Data Grid ---
+    st.metric("Overallocated employees", f"{overallocated_count}", delta="needs review" if overallocated_count else "clear", delta_color="inverse" if overallocated_count else "normal")
+
+# --- 4. Live Charts Row ---
+col_chart1, col_chart2 = st.columns([2, 1])
+
+with col_chart1:
+    st.markdown("### Utilization by Employee")
+    if not df_employees.empty:
+        st.altair_chart(utilization_chart(df_employees), use_container_width=True)
+
+with col_chart2:
+    st.markdown("### Cost Center by Dept")
+    if not df_employees.empty:
+        dept_costs = df_employees.groupby("department")["allocated_internal_cost"].sum().reset_index()
+        st.bar_chart(dept_costs, x="department", y="allocated_internal_cost", use_container_width=True)
+
+# --- 5. Data Grid with Native Heatmap Status Styling ---
 st.markdown("### Detailed Employee Breakdown")
+
+def style_risk_status(val):
+    if val == "Overallocated":
+        return "background-color: #fce4d6; color: #c65911; font-weight: bold;"
+    return "background-color: #e2f0d9; color: #385723;"
+
+styled_df = df_employees.sort_values("total_utilization", ascending=False).style.map(
+    style_risk_status, subset=["risk"]
+)
+
 st.dataframe(
-    df_employees.sort_values("total_utilization", ascending=False),
+    styled_df,
     hide_index=True,
     height=table_height(len(df_employees), 300, 540),
     column_config={
@@ -231,11 +268,11 @@ st.dataframe(
         "department": "Department",
         "location": "Location",
         "hours_per_year": st.column_config.NumberColumn("Hours / year", format="%d"),
-        "hourly_rate": st.column_config.NumberColumn("Hourly rate", format="$ %.2f"),
+        "hourly_rate": st.column_config.NumberColumn("Hourly rate (Simulated)", format="$ %.2f"),
         "total_utilization": st.column_config.ProgressColumn(
             "Utilization", min_value=0, max_value=160, format="%.0f%%"
         ),
         "allocated_internal_cost": money_column("Employee internal cost"),
-        "risk": "Status",
+        "risk": "Status Flag",
     },
 )
