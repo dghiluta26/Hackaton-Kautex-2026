@@ -3,6 +3,7 @@
 Admin accounts are only created via database/seed.py (for now).
 """
 
+from __future__ import annotations
 import streamlit as st
 
 from models.user import UserRole

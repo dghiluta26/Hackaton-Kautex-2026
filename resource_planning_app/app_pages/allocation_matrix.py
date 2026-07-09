@@ -1,5 +1,5 @@
 """Allocation matrix page: assign employees to topics and check utilization."""
-
+from __future__ import annotations
 import streamlit as st
 import pandas as pd
 

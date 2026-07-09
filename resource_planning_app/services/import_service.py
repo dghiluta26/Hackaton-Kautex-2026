@@ -5,6 +5,7 @@ conventions already used by the ad hoc CSV importers on the Employees and
 Topics pages, plus a new Allocations importer.
 """
 
+from __future__ import annotations
 import io
 
 import pandas as pd

@@ -3,7 +3,7 @@
 Used by the Topics page (per-topic cost items) and the Reports page
 (executive report generator).
 """
-
+from __future__ import annotations
 from sqlmodel import select
 
 from database.connection import get_session

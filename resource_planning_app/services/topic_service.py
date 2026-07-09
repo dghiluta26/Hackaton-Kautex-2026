@@ -3,7 +3,7 @@
 This module will contain the functions used by the Topics page to talk
 to the database. For now it only holds placeholders.
 """
-
+from __future__ import annotations
 from sqlmodel import select
 from database.connection import get_session
 from models.topic import Topic

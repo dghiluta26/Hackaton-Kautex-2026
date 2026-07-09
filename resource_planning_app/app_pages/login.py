@@ -5,6 +5,7 @@ form. Colors/logo are left as native theme defaults for now and will be
 styled once the real branding assets are provided.
 """
 
+from __future__ import annotations
 import streamlit as st
 
 from services.auth_service import authenticate_user
