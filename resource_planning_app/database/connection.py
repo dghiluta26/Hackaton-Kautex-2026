@@ -1,9 +1,10 @@
 """Database connection setup for the Resource Planning App.
 
 Reads DATABASE_URL from Streamlit secrets (or the environment) so the app
-can point at Supabase/Postgres. Falls back to a local SQLite file under
-`data/` when no DATABASE_URL is configured, which keeps local dev working
-without any secrets set up.
+connects to the shared Supabase/Postgres database. There is deliberately no
+silent fallback to a local SQLite file: everyone must point at the same
+database, and a missing secret should fail loudly rather than quietly
+create an empty local database that looks like data loss.
 """
 
 import os
@@ -12,7 +13,7 @@ from pathlib import Path
 import streamlit as st
 from sqlmodel import Session, SQLModel, create_engine
 
-# Project paths
+# Project paths (kept for the one-off sqlite -> Supabase migration script)
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 DATABASE_PATH = DATA_DIR / "planning.db"
@@ -28,17 +29,22 @@ def _resolve_database_url() -> str:
     if "DATABASE_URL" in os.environ:
         return os.environ["DATABASE_URL"]
 
-    # Local fallback: SQLite file under data/
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{DATABASE_PATH}"
+    raise RuntimeError(
+        "DATABASE_URL is not set. Add it to resource_planning_app/.streamlit/secrets.toml "
+        "(see secrets.toml.example) or set it as an environment variable before running "
+        "the app, so you connect to the shared Supabase database instead of a fresh, "
+        "empty local one."
+    )
 
 
 DATABASE_URL = _resolve_database_url()
 
-# `check_same_thread=False` is only needed for SQLite (Streamlit can access
-# the database from different threads); Postgres connections don't need it.
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(DATABASE_URL, echo=False, connect_args=connect_args)
+engine = create_engine(
+    DATABASE_URL,
+    echo=False,
+    pool_pre_ping=True,  # Supabase's pooler drops idle connections; check aliveness before reuse
+    pool_recycle=300,  # and don't hold onto a pooled connection longer than that anyway
+)
 
 
 def get_session() -> Session:
