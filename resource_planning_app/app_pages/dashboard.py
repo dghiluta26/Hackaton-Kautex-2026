@@ -14,6 +14,7 @@ from app_theme import (
 from services.employee_service import get_all_employees
 from services.topic_service import get_all_topics
 from services.allocation_service import get_all_allocations
+from services.cost_service import get_all_cost_items
 
 inject_app_theme()
 render_kautex_header(
@@ -23,9 +24,11 @@ render_kautex_header(
 )
 
 # --- 1. Fetch Real Data ---
+# --- 1. Fetch Real Data ---
 db_employees = get_all_employees()
 db_topics = get_all_topics()
 db_allocations = get_all_allocations()
+db_costs = get_all_cost_items() # NEW: Fetch all external costs
 
 if not db_employees:
     st.info("Please add employees and topics to view dashboard analytics.")
@@ -63,13 +66,19 @@ overallocated_count = len(df_employees[df_employees["total_utilization"] > 100])
 avg_utilization = df_employees["total_utilization"].mean() if not df_employees.empty else 0
 
 # --- 3. Top Metrics Row ---
+# Calculate external costs from the CostItem table
+total_external_cost = sum([c.amount for c in db_costs if c.amount is not None])
+grand_total_cost = total_internal_cost + total_external_cost
+
 with st.container(horizontal=True):
     st.metric("Total employees", f"{len(db_employees)}", border=True)
     st.metric("Total topics", f"{len(db_topics)}", border=True)
     st.metric("Average utilization", f"{avg_utilization:.0f}%", border=True)
-    st.metric("Total internal cost", f"$ {total_internal_cost:,.0f}", border=True)
-    st.metric("Overallocated employees", f"{overallocated_count}", delta="needs review" if overallocated_count else "clear", border=True)
 
+    # Cost Breakdown
+    st.metric("Internal Cost", f"${total_internal_cost:,.0f}", border=True)
+    st.metric("External Cost", f"${total_external_cost:,.0f}", border=True)
+    st.metric("Grand Total", f"${grand_total_cost:,.0f}", border=True)
 # --- 4. Live Utilization Chart ---
 st.markdown("### Utilization by Employee")
 if not df_employees.empty:

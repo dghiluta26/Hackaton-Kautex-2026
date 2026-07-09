@@ -27,10 +27,26 @@ def get_topic_by_id(topic_id: int) -> Topic | None:
 
 
 def update_topic(topic_id: int, updated_data: dict) -> Topic:
-    # TODO: update an existing topic's fields
-    raise NotImplementedError
+    """Updates an existing topic's fields in the database."""
+    with get_session() as session:
+        topic = session.get(Topic, topic_id)
+        if not topic:
+            raise ValueError(f"Topic with ID {topic_id} not found.")
+
+        for key, value in updated_data.items():
+            if hasattr(topic, key):
+                setattr(topic, key, value)
+
+        session.add(topic)
+        session.commit()
+        session.refresh(topic)
+        return topic
 
 
 def delete_topic(topic_id: int) -> None:
-    # TODO: delete a topic from the database
-    raise NotImplementedError
+    """Deletes a topic from the database."""
+    with get_session() as session:
+        topic = session.get(Topic, topic_id)
+        if topic:
+            session.delete(topic)
+            session.commit()

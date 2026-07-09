@@ -7,6 +7,7 @@ the `data/` folder exists before SQLite tries to write the database file.
 from pathlib import Path
 
 from sqlmodel import Session, SQLModel, create_engine
+from models.external_cost import ExternalCost
 
 # Project paths
 BASE_DIR = Path(__file__).resolve().parent.parent

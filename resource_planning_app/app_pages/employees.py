@@ -60,10 +60,16 @@ if uploaded_file is not None:
         # Loop through every row in the file
         for index, row in df.iterrows():
             new_emp = Employee(
-                name=row.get("name"),
+                name=str(row["name"]).strip(),
+
+                # NEW: Grab the team, department, and location from the CSV
+                team_id=str(row.get("team", "")) if pd.notna(row.get("team")) else None,
+                department_id=str(row.get("department", "")) if pd.notna(row.get("department")) else None,
+                location_id=str(row.get("location", "")) if pd.notna(row.get("location")) else None,
+
                 available_hours_per_year=row.get("available_hours_per_year", 0.0),
                 hourly_rate=row.get("hourly_rate", 0.0),
-                status=row.get("status", "Active")
+                status=str(row.get("status", "Active"))
             )
             create_employee(new_emp)
             success_count += 1
