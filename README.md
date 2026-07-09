@@ -1,4 +1,4 @@
-# 📊 Kautex Resource & Cost Planning Platform
+# Kautex Resource & Cost Planning Platform
 
 > A Streamlit web application for planning engineering headcount, allocating employees to
 > projects, and tracking multi-level project costs — built for the Kautex Hackathon 2026.
@@ -16,15 +16,15 @@
 - [Overview](#overview)
 - [Repository Layout](#repository-layout)
 - [Core Application: `resource_planning_app/`](#core-application-resource_planning_app)
-  - [Features](#features)
-  - [Data Model](#data-model)
-  - [Architecture](#architecture)
+ - [Features](#features)
+ - [Data Model](#data-model)
+ - [Architecture](#architecture)
 - [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-  - [Database Configuration](#database-configuration)
-  - [Seeding an Admin Account](#seeding-an-admin-account)
-  - [Running the App](#running-the-app)
+ - [Prerequisites](#prerequisites)
+ - [Installation](#installation)
+ - [Database Configuration](#database-configuration)
+ - [Seeding an Admin Account](#seeding-an-admin-account)
+ - [Running the App](#running-the-app)
 - [Sample Data](#sample-data)
 - [Companion BI Dashboard Prototype](#companion-bi-dashboard-prototype)
 - [Legacy / Early Scaffold Files](#legacy--early-scaffold-files)
@@ -44,7 +44,7 @@ resource-planning and cost-management tool that lets an engineering organization
 - create **topics** (projects / initiatives) with objectives, deliverables, and status,
 - **allocate** employees to topics as a percentage of their available capacity,
 - track **cost items** (external tooling, testing, recovery) alongside computed internal
-  personnel cost, and
+ personnel cost, and
 - **export/import** data and generate executive-facing cost reports.
 
 The project is organized as one primary deliverable plus supporting prototypes and
@@ -52,11 +52,11 @@ planning documents produced during the hackathon:
 
 | Folder / File | Role |
 |---|---|
-| [`resource_planning_app/`](#core-application-resource_planning_app) | ✅ **The main application.** Multi-user Streamlit app with authentication, role-based access, and a shared Supabase/PostgreSQL database. |
-| `kautex_bi_dashboard*.py` | 🧪 Standalone single-file executive BI dashboard **prototype/template** with mock data (see [below](#companion-bi-dashboard-prototype)). |
-| `app.py`, `Login.py`, root `requirements.txt` | 🕰️ An earlier scaffold of the app that predates `resource_planning_app/` (see [Legacy files](#legacy--early-scaffold-files)). |
-| `seed_employee.csv`, `seed_topics.csv`, `Hackathon Database (Good).csv` | 📄 Sample/seed data used to populate and demo the app. |
-| `QUICKSTART.md`, `DEPLOYMENT_GUIDE.md`, `FEATURES_COMPLETE.md`, `DELIVERY_SUMMARY.md`, `INDEX.md` | 📚 Additional planning/handoff notes written earlier in the project. Where they conflict with this README or with the code in `resource_planning_app/`, **this README and the code are the source of truth.** |
+| [`resource_planning_app/`](#core-application-resource_planning_app) | **The main application.** Multi-user Streamlit app with authentication, role-based access, and a shared Supabase/PostgreSQL database. |
+| `kautex_bi_dashboard*.py` | Standalone single-file executive BI dashboard **prototype/template** with mock data (see [below](#companion-bi-dashboard-prototype)). |
+| `app.py`, `Login.py`, root `requirements.txt` | An earlier scaffold of the app that predates `resource_planning_app/` (see [Legacy files](#legacy--early-scaffold-files)). |
+| `seed_employee.csv`, `seed_topics.csv`, `Hackathon Database (Good).csv` | Sample/seed data used to populate and demo the app. |
+| `QUICKSTART.md`, `DEPLOYMENT_GUIDE.md`, `FEATURES_COMPLETE.md`, `DELIVERY_SUMMARY.md`, `INDEX.md` | Additional planning/handoff notes written earlier in the project. Where they conflict with this README or with the code in `resource_planning_app/`, **this README and the code are the source of truth.** |
 
 ---
 
@@ -72,7 +72,7 @@ Hackaton-Kautex-2026/
 ├── seed_topics.csv                  ← sample topic/project data
 ├── Hackathon Database (Good).csv    ← extended sample dataset
 │
-└── resource_planning_app/           ← ★ THE MAIN APPLICATION ★
+└── resource_planning_app/           ← THE MAIN APPLICATION
     ├── app.py                       # Entry point: auth + role-based navigation
     ├── app_theme.py                 # Shared Kautex styling, charts, helpers
     ├── requirements.txt
@@ -116,30 +116,30 @@ Hackaton-Kautex-2026/
 
 ### Features
 
-**🔐 Authentication & Roles**
+** Authentication & Roles**
 - Username/password login with `bcrypt` password hashing.
 - Self-service sign-up creates an **Employee**-role account; **Admin** accounts are
-  seeded via `database/seed.py`.
+ seeded via `database/seed.py`.
 - Role-based navigation: Admins see an extra **Employees** management page; both roles
-  see Dashboard, Topics, Allocation Matrix, and Reports.
+ see Dashboard, Topics, Allocation Matrix, and Reports.
 
-**👥 Employee Management** (admin only)
+** Employee Management** (admin only)
 - Create, edit, and delete employee records: name, team, department, location,
-  available hours/year, hourly rate, status, manager, notes.
+ available hours/year, hourly rate, status, manager, notes.
 
-**📌 Topic (Project) Management**
+** Topic (Project) Management**
 - Create, edit, and delete topics with category, area, objective, deliverables,
-  business justification, status, and notes.
+ business justification, status, and notes.
 - Mass-import topics from CSV.
 - Attach cost items to a topic (see below).
 
-**🎯 Allocation Matrix**
+** Allocation Matrix**
 - Assign any employee to any topic as a percentage of their capacity.
 - Live utilization tracking per employee across all their topic assignments.
 - Per-employee, per-topic cost computed automatically from hours, rate, and
-  allocation percentage.
+ allocation percentage.
 
-**💰 Multi-Level Cost Tracking**
+** Multi-Level Cost Tracking**
 Each topic's total cost is the sum of:
 ```
 Total Cost = Internal Personnel Cost      (Σ allocated hours × hourly rate)
@@ -148,21 +148,21 @@ Total Cost = Internal Personnel Cost      (Σ allocated hours × hourly rate)
            − Recovery / rebilling
 ```
 - Cost items are categorized as **External Tooling**, **Testing**, or **Recovery**
-  and entered per topic.
+ and entered per topic.
 - "High-cost" topics (external costs above a configurable share of total cost) are
-  automatically flagged for executive review.
+ automatically flagged for executive review.
 
-**📈 Dashboard**
+** Dashboard**
 - Live headcount, total cost, and average cost-per-employee metrics.
 - Utilization charts and cost-distribution visualizations (Altair).
 
-**📤 Reports — Export / Import**
+** Reports — Export / Import**
 - **Export:** Employees, Topics, and Allocations to CSV; a formatted Excel cost
-  report; and an Excel allocation matrix.
+ report; and an Excel allocation matrix.
 - **Import:** Bulk CSV upload for employees, topics, and allocations, with
-  per-row validation and an import summary.
+ per-row validation and an import summary.
 - **Executive cost report**: global totals, per-topic cost breakdown, and
-  high-cost topic flags in one view.
+ high-cost topic flags in one view.
 
 ### Data Model
 
@@ -196,13 +196,13 @@ database/   (SQLModel engine → Supabase / PostgreSQL)
 ```
 
 - **`utils/calculations.py`** holds pure, dependency-free functions (cost formulas,
-  utilization checks) so the core business math can be unit-tested independently of
-  Streamlit and the database.
+ utilization checks) so the core business math can be unit-tested independently of
+ Streamlit and the database.
 - **`services/cost_service.py`** aggregates allocations and cost items in a single
-  round trip per table (rather than one query per topic) to avoid N+1 queries against
-  the hosted Supabase database.
+ round trip per table (rather than one query per topic) to avoid N+1 queries against
+ the hosted Supabase database.
 - The **Reports** page uses `st.fragment` so that interacting with one tab (e.g. the
-  import-type selector) doesn't force a full-page rerun of every other tab's queries.
+ import-type selector) doesn't force a full-page rerun of every other tab's queries.
 
 ---
 
@@ -212,8 +212,8 @@ database/   (SQLModel engine → Supabase / PostgreSQL)
 
 - Python 3.10+
 - A [Supabase](https://supabase.com/) project (or any PostgreSQL database) — the app
-  is designed to connect to a **shared** database rather than a local file, so every
-  user sees the same data.
+ is designed to connect to a **shared** database rather than a local file, so every
+ user sees the same data.
 
 ### Installation
 
@@ -279,10 +279,10 @@ Two ready-to-import CSV files are provided at the repository root for quickly
 populating a fresh database via the Reports → Import tab:
 
 - **`seed_employee.csv`** — sample headcount (name, team, department, location,
-  available hours/year, hourly rate, status).
+ available hours/year, hourly rate, status).
 - **`seed_topics.csv`** — sample topics/projects (name, category, area, status).
 - **`Hackathon Database (Good).csv`** — a larger combined sample dataset used during
-  the hackathon demo.
+ the hackathon demo.
 
 ---
 
