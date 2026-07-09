@@ -3,6 +3,7 @@
 Used by the Reports page's "Export Data" tab.
 """
 
+from __future__ import annotations
 import io
 
 import pandas as pd

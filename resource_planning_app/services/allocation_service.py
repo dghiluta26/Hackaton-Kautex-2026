@@ -1,5 +1,6 @@
 """Service layer for Allocation CRUD operations."""
 
+from __future__ import annotations
 from sqlmodel import select
 from database.connection import get_session
 from models.allocation import Allocation

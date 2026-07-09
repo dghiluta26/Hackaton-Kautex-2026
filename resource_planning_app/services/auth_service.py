@@ -4,6 +4,7 @@ Unlike the other service files, this one is fully implemented since
 login/registration is the feature being built right now.
 """
 
+from __future__ import annotations
 import bcrypt
 from sqlmodel import select
 
