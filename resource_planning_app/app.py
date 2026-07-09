@@ -4,7 +4,7 @@ Handles database setup, login/session state, and role-based navigation.
 Run with:
     streamlit run app.py
 """
-
+from __future__ import annotations
 import streamlit as st
 
 from app_theme import inject_app_theme
