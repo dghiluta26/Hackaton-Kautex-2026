@@ -1,6 +1,6 @@
 """
 Kautex Executive BI Dashboard — Streamlit template
-=================================================
+==================================================
 
 Single-file executive BI dashboard for Kautex.
 Run:  streamlit run kautex_bi_dashboard.py
@@ -36,6 +36,7 @@ import streamlit as st
 # ============================================================
 st.set_page_config(
     page_title="Kautex Executive BI",
+    page_icon="🏭",
     layout="wide",
     initial_sidebar_state="expanded",
 )
