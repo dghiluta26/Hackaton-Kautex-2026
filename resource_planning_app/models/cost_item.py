@@ -1,13 +1,15 @@
-"""CostItem model: extra costs associated with a topic (non-employee costs)."""
-
+from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional
-
-from sqlmodel import Field, SQLModel
-
+from datetime import datetime
 
 class CostItem(SQLModel, table=True):
+    """CostItem model for tracking external costs and recovery amounts."""
     id: Optional[int] = Field(default=None, primary_key=True)
-    topic_id: Optional[int] = Field(default=None, foreign_key="topic.id")
-    cost_type: Optional[str] = None
-    amount: Optional[float] = None
-    description: Optional[str] = None
+    topic_id: int = Field(foreign_key="topic.id", index=True)
+    cost_type: str  # "Internal", "External Tooling", "Testing", "Recovery"
+    amount: float  # Negative values for Recovery
+    description: str = Field(default="")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    
+    topic: Optional["Topic"] = Relationship(back_populates="cost_items")

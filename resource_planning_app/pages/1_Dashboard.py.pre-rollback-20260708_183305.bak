@@ -1,0 +1,171 @@
+"""
+Kautex Executive BI Dashboard — Streamlit template
+=================================================
+
+Single-file executive BI dashboard for Kautex.
+Run:  streamlit run kautex_bi_dashboard.py
+
+Designed to be extended by GitHub Copilot in PyCharm:
+- All mock data lives in the "DATA" section at the top; replace with
+  real sources (Excel via pandas.read_excel, SQL, API, etc.).
+- All chart builders are small pure functions taking a DataFrame.
+- Region filter propagates through the whole page.
+- Dark/light theme toggle in the sidebar.
+- Interactive "world" region selector (Plotly scatter_geo with clickable
+  Kautex regions) mirrors the web version's globe.
+
+Dependencies:
+    pip install streamlit pandas plotly
+
+Tested with:
+    streamlit>=1.37, pandas>=2.2, plotly>=5.22
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import Literal
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import streamlit as st
+
+# ============================================================
+# PAGE CONFIG
+# ============================================================
+st.set_page_config(
+    page_title="Kautex Executive BI",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ============================================================
+# THEME
+# ============================================================
+Theme = Literal["dark", "light"]
+
+
+@dataclass(frozen=True)
+class Palette:
+    background: str
+    surface: str
+    text: str
+    muted: str
+    border: str
+    primary: str        # Kautex red
+    success: str
+    warning: str
+    info: str
+    chart: tuple[str, ...]
+
+
+DARK = Palette(
+    background="#1a1d24",
+    surface="#22262f",
+    text="#f2f3f5",
+    muted="#9aa1ad",
+    border="#333844",
+    primary="#e0524a",
+    success="#5ec78a",
+    warning="#e0b74a",
+    info="#4a9ee0",
+    chart=("#e0524a", "#4a9ee0", "#5ec78a", "#e0b74a", "#a877e0"),
+)
+
+LIGHT = Palette(
+    background="#f6f7f9",
+    surface="#ffffff",
+    text="#1a1d24",
+    muted="#5b6470",
+    border="#e2e5ea",
+    primary="#c9342b",
+    success="#2f9d5a",
+    warning="#b8871c",
+    info="#2f7fc0",
+    chart=("#c9342b", "#2f7fc0", "#2f9d5a", "#b8871c", "#7a4fb0"),
+)
+
+
+def get_palette(theme: Theme) -> Palette:
+    return DARK if theme == "dark" else LIGHT
+
+
+def inject_css(p: Palette) -> None:
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{ background-color: {p.background}; color: {p.text}; }}
+        section[data-testid="stSidebar"] {{ background-color: {p.surface}; }}
+        .block-container {{ padding-top: 1.5rem; max-width: 1600px; }}
+        .kpi-card {{
+            background: {p.surface};
+            border: 1px solid {p.border};
+            border-radius: 10px;
+            padding: 16px 18px;
+            height: 100%;
+        }}
+        .kpi-label {{ color: {p.muted}; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }}
+        .kpi-value {{ font-size: 28px; font-weight: 700; margin-top: 4px; color: {p.text}; }}
+        .kpi-delta-up {{ color: {p.success}; font-size: 12px; font-weight: 600; }}
+        .kpi-delta-down {{ color: {p.primary}; font-size: 12px; font-weight: 600; }}
+        .kpi-sub {{ color: {p.muted}; font-size: 11px; margin-top: 2px; }}
+        h1, h2, h3 {{ color: {p.text}; }}
+        .section-title {{
+            font-size: 12px; text-transform: uppercase; letter-spacing: .08em;
+            color: {p.text}; margin: 8px 0 6px 0; font-weight: 600;
+        }}
+        .section-sub {{ color: {p.muted}; font-size: 11px; margin-bottom: 10px; }}
+        .badge {{ display:inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }}
+        .badge-ok {{ background: {p.success}22; color: {p.success}; }}
+        .badge-warn {{ background: {p.warning}22; color: {p.warning}; }}
+        .badge-risk {{ background: {p.primary}22; color: {p.primary}; }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def plotly_layout(p: Palette) -> dict:
+    """Shared Plotly layout for consistent theming."""
+    return dict(
+        paper_bgcolor=p.surface,
+        plot_bgcolor=p.surface,
+        font=dict(color=p.text, size=12),
+        margin=dict(l=10, r=10, t=30, b=10),
+        xaxis=dict(gridcolor=p.border, zerolinecolor=p.border),
+        yaxis=dict(gridcolor=p.border, zerolinecolor=p.border),
+        legend=dict(bgcolor="rgba(0,0,0,0)"),
+    )
+
+
+# ============================================================
+# DATA  ── Replace these blocks with real data sources.
+# Kept as plain DataFrames so Copilot can easily swap in
+# pd.read_excel("archive/xxx.xlsx", sheet_name="...") calls.
+# ============================================================
+
+# Kautex regions with an approximate geographic center used for the globe.
+REGIONS = pd.DataFrame(
+    [
+        {"region": "EMEA",     "lat": 50.0, "lon": 10.0, "hq": "Bonn, Germany"},
+        {"region": "Americas", "lat": 30.0, "lon": -90.0, "hq": "Shelbyville, USA"},
+        {"region": "APAC",     "lat": 25.0, "lon": 110.0, "hq": "Wuhan, China"},
+    ]
+)
+
+PLANTS = pd.DataFrame(
+    [
+        {"plant": "Bonn",         "region": "EMEA",     "lat": 50.73, "lon":   7.10, "oee": 82.1, "volume_m": 28.4, "scrap_pct": 1.80},
+        {"plant": "Blumberg",     "region": "EMEA",     "lat": 47.84, "lon":   8.54, "oee": 80.4, "volume_m": 24.6, "scrap_pct": 2.00},
+        {"plant": "Shelbyville",  "region": "Americas", "lat": 39.52, "lon": -85.78, "oee": 79.6, "volume_m": 31.2, "scrap_pct": 2.10},
+        {"plant": "Querétaro",    "region": "Americas", "lat": 20.59, "lon":-100.39, "oee": 77.9, "volume_m": 19.8, "scrap_pct": 2.30},
+        {"plant": "São Paulo",    "region": "Americas", "lat":-23.55, "lon": -46.63, "oee": 74.3, "volume_m": 18.9, "scrap_pct": 2.70},
+        {"plant": "Wuhan",        "region": "APAC",     "lat": 30.59, "lon": 114.30, "oee": 81.2, "volume_m": 26.1, "scrap_pct": 1.90},
+        {"plant": "Suzhou",       "region": "APAC",     "lat": 31.30, "lon": 120.58, "oee": 78.5, "volume_m": 13.7, "scrap_pct": 2.50},
+        {"plant": "Chennai",      "region": "APAC",     "lat": 13.08, "lon":  80.27, "oee": 76.8, "volume_m": 21.5, "scrap_pct": 2.40},
+    ]
+)
+
+
+

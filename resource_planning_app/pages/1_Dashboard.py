@@ -1,0 +1,166 @@
+import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
+from sqlmodel import Session
+from database.connection import engine
+from services.employee_service import EmployeeService
+from services.topic_service import TopicService
+from utils.calculations import CostCalculator, ReportGenerator
+from utils.auth import is_authenticated, get_current_user
+
+if not is_authenticated():
+    st.switch_page("Login.py")
+
+st.set_page_config(page_title="Dashboard", layout="wide")
+
+st.title("Executive Dashboard")
+st.markdown("---")
+
+with Session(engine) as session:
+    # Get global metrics
+    metrics = CostCalculator.get_global_totals(session)
+    
+    # Display KPIs
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric(
+            "Total Cost",
+            f"${metrics['total_cost']:,.2f}",
+            delta=None
+        )
+    
+    with col2:
+        st.metric(
+            "Total Headcount",
+            metrics['total_headcount'],
+            delta=None
+        )
+    
+    with col3:
+        st.metric(
+            "Avg Cost/Employee",
+            f"${metrics['average_cost_per_employee']:,.2f}",
+            delta=None
+        )
+    
+    with col4:
+        st.metric(
+            "Status",
+            "Healthy",
+            delta=None
+        )
+    
+    st.markdown("---")
+    
+    # Get all topics and their costs
+    topics = TopicService.get_all_topics(session)
+    employees = EmployeeService.get_all_employees(session)
+    
+    if topics:
+        # Prepare data for visualization
+        topic_data = []
+        for topic in topics:
+            cost_breakdown = CostCalculator.get_topic_total_cost(session, topic.id)
+            topic_data.append({
+                'Topic': topic.name,
+                'Category': topic.category,
+                'Internal': cost_breakdown['internal_personnel'],
+                'External Tooling': cost_breakdown['external_tooling'],
+                'Testing': cost_breakdown['testing'],
+                'Recovery': cost_breakdown['recovery'],
+                'Total': cost_breakdown['total']
+            })
+        
+        df_costs = pd.DataFrame(topic_data)
+        
+        # Create cost distribution chart
+        st.subheader("Budget Distribution by Project")
+        
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Stacked bar chart
+            fig = go.Figure(data=[
+                go.Bar(name='Internal Personnel', x=df_costs['Topic'], y=df_costs['Internal']),
+                go.Bar(name='External Tooling', x=df_costs['Topic'], y=df_costs['External Tooling']),
+                go.Bar(name='Testing', x=df_costs['Topic'], y=df_costs['Testing']),
+                go.Bar(name='Recovery', x=df_costs['Topic'], y=df_costs['Recovery'])
+            ])
+            fig.update_layout(
+                barmode='stack',
+                title="Cost Breakdown by Project",
+                xaxis_title="Project",
+                yaxis_title="Cost ($)",
+                height=400,
+                hovermode='x unified'
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col1:
+            # Cost Summary Table
+            st.subheader("Cost Summary")
+            df_display = df_costs[['Topic', 'Category', 'Internal', 'External Tooling', 'Total']].copy()
+            df_display['Internal'] = df_display['Internal'].apply(lambda x: f"${x:,.2f}")
+            df_display['External Tooling'] = df_display['External Tooling'].apply(lambda x: f"${x:,.2f}")
+            df_display['Total'] = df_display['Total'].apply(lambda x: f"${x:,.2f}")
+            
+            st.dataframe(df_display, use_container_width=True, hide_index=True)
+        
+        st.markdown("---")
+        
+        # Budget Justification Section
+        st.subheader("Budget Justification & Alerts")
+        
+        high_cost_topics = ReportGenerator.get_high_cost_topics(session, threshold_percentage=0.3)
+        
+        if high_cost_topics:
+            st.warning(f"{len(high_cost_topics)} project(s) flagged for high external costs")
+            
+            for i, topic_info in enumerate(high_cost_topics):
+                with st.expander(
+                    f"{topic_info['name']} - {topic_info['external_ratio']*100:.1f}% External",
+                    expanded=(i==0)
+                ):
+                    col1, col2 = st.columns([2, 1])
+                    
+                    with col1:
+                        st.markdown(f"**Category:** {topic_info['category']}")
+                        st.markdown(f"**Business Justification:**\n\n{topic_info['business_justification']}")
+                    
+                    with col2:
+                        st.markdown("**Cost Breakdown:**")
+                        st.metric("Total Cost", f"${topic_info['total_cost']:,.2f}")
+                        st.metric("External Cost", f"${topic_info['external_cost']:,.2f}")
+                        st.metric("External %", f"{topic_info['external_ratio']*100:.1f}%")
+        else:
+            st.info("All projects have reasonable external cost ratios")
+        
+        st.markdown("---")
+        
+        # Employee Utilization
+        st.subheader("Employee Allocation Status")
+        
+        from services.allocation_service import AllocationService
+        
+        allocation_data = []
+        for employee in employees:
+            total_allocation = AllocationService.get_employee_total_allocation(session, employee.id)
+            allocation_data.append({
+                'Name': employee.name,
+                'Location': employee.location,
+                'Allocation %': f"{total_allocation*100:.1f}%",
+                'Status': 'Allocated' if total_allocation == 1.0 else ('Partial' if total_allocation > 0 else 'Unallocated')
+            })
+        
+        if allocation_data:
+            df_allocation = pd.DataFrame(allocation_data)
+            st.dataframe(df_allocation, use_container_width=True, hide_index=True)
+        else:
+            st.info("No employees allocated yet. Go to Allocations page to add allocations.")
+    else:
+        st.info("No topics created yet. Go to Topics page to get started.")
+
+current_user = get_current_user()
+if current_user:
+    st.markdown(f"**Role:** {current_user['role']} — {current_user['name']}")
