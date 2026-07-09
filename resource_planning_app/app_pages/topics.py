@@ -3,59 +3,215 @@
 import streamlit as st
 import pandas as pd
 
+from app_theme import inject_app_theme, render_kautex_header
 from models.topic import Topic
-from services.topic_service import create_topic, get_all_topics
+from models.user import UserRole
+from services.cost_service import (
+    create_cost_item,
+    delete_cost_item,
+    get_cost_items_by_topic,
+    get_topic_cost_breakdown,
+)
+from services.topic_service import create_topic, delete_topic, get_all_topics, update_topic
 
-st.title("Topics")
-st.caption("View and manage topics/projects, their objectives and deliverables.")
+inject_app_theme()
+render_kautex_header(
+    "Topics",
+    "View and manage topics/projects, their objectives, deliverables, and costs.",
+    "Project management",
+)
 
-# --- 1. Display Current Topics ---
-st.subheader("Topic List")
-all_topics = get_all_topics()
+is_admin = st.session_state.user.role == UserRole.ADMIN
 
-if len(all_topics) > 0:
-    st.dataframe([topic.model_dump() for topic in all_topics], hide_index=True)
-else:
-    st.info("No topics found. Please upload a CSV below.")
+tab_list, tab_add, tab_costs = st.tabs(["Topic List", "Add / Edit Topic", "Manage Costs"])
 
-st.divider()
+# --- 1. Topic List ---
+with tab_list:
+    all_topics = get_all_topics()
 
-# --- 2. The CSV Uploader ---
-st.subheader("Mass Import Topics (CSV)")
-st.caption("Required columns: name, category, area, status")
+    if len(all_topics) > 0:
+        st.dataframe([topic.model_dump() for topic in all_topics], hide_index=True)
+    else:
+        st.info("No topics found. Add one in the 'Add / Edit Topic' tab.")
 
-uploaded_file = st.file_uploader("Upload CSV", type="csv", key="topic_uploader")
+    st.divider()
+    st.subheader("Mass Import Topics (CSV)")
+    st.caption("Required columns: name, category, area, status")
 
-if uploaded_file is not None:
-    # Smart delimiter detection (Comma vs Semicolon) and BOM handling
-    sample = uploaded_file.read(1024).decode("utf-8-sig", errors="ignore")
-    uploaded_file.seek(0)
-    separator = ";" if ";" in sample.split("\n")[0] else ","
+    uploaded_file = st.file_uploader("Upload CSV", type="csv", key="topic_uploader")
 
-    df = pd.read_csv(uploaded_file, sep=separator, encoding="utf-8-sig")
-    df.columns = [str(col).strip().lower() for col in df.columns]
+    if uploaded_file is not None:
+        # Smart delimiter detection (Comma vs Semicolon) and BOM handling
+        sample = uploaded_file.read(1024).decode("utf-8-sig", errors="ignore")
+        uploaded_file.seek(0)
+        separator = ";" if ";" in sample.split("\n")[0] else ","
 
-    st.write(f"Preview (Detected separator: '{separator}'):")
-    st.dataframe(df.head(), hide_index=True)
+        df = pd.read_csv(uploaded_file, sep=separator, encoding="utf-8-sig")
+        df.columns = [str(col).strip().lower() for col in df.columns]
 
-    if st.button("Import to Database", type="primary"):
-        success_count = 0
-        skipped_count = 0
+        st.write(f"Preview (Detected separator: '{separator}'):")
+        st.dataframe(df.head(), hide_index=True)
 
-        for index, row in df.iterrows():
-            # Skip blank rows
-            if pd.isna(row.get("name")) or str(row.get("name")).strip() == "":
-                skipped_count += 1
-                continue
+        if st.button("Import to Database", type="primary"):
+            success_count = 0
+            skipped_count = 0
 
-            new_topic = Topic(
-                name=str(row["name"]).strip(),
-                category=str(row.get("category", "Unmapped")),
-                area=str(row.get("area", "")),
-                status=str(row.get("status", "Active"))
+            for index, row in df.iterrows():
+                # Skip blank rows
+                if pd.isna(row.get("name")) or str(row.get("name")).strip() == "":
+                    skipped_count += 1
+                    continue
+
+                new_topic = Topic(
+                    name=str(row["name"]).strip(),
+                    category=str(row.get("category", "Unmapped")),
+                    area=str(row.get("area", "")),
+                    status=str(row.get("status", "Active"))
+                )
+                create_topic(new_topic)
+                success_count += 1
+
+            st.success(f"Successfully imported {success_count} topics! (Skipped {skipped_count} invalid rows)")
+            st.rerun()
+
+# --- 2. Add / Edit Topic ---
+with tab_add:
+    if not is_admin:
+        st.warning("Only admins can add or edit topics. Your role: " + st.session_state.user.role.value.capitalize())
+    else:
+        st.subheader("Add new topic")
+        with st.form("add_topic_form"):
+            name = st.text_input("Topic name:", placeholder="e.g., Customer Request - Project X")
+            category = st.selectbox(
+                "Category:",
+                ["Internal Efforts", "Customer Request", "CAE", "Testing", "Other"],
             )
-            create_topic(new_topic)
-            success_count += 1
+            area = st.text_input("Area:", placeholder="e.g., AI initiatives")
+            status = st.selectbox("Status:", ["Active", "At risk", "On hold", "Completed"])
+            business_justification = st.text_area(
+                "Business justification:",
+                placeholder="Explain why this project is needed and its strategic value...",
+                height=120,
+            )
 
-        st.success(f"Successfully imported {success_count} topics! (Skipped {skipped_count} invalid rows)")
-        st.rerun()
+            submitted = st.form_submit_button("Add Topic", type="primary")
+            if submitted:
+                if not name:
+                    st.error("Topic name is required.")
+                else:
+                    create_topic(
+                        Topic(
+                            name=name,
+                            category=category,
+                            area=area,
+                            status=status,
+                            business_justification=business_justification,
+                        )
+                    )
+                    st.success("Topic added successfully!")
+                    st.rerun()
+
+        st.divider()
+        st.subheader("Edit or delete an existing topic")
+
+        all_topics = get_all_topics()
+        if not all_topics:
+            st.info("No topics yet.")
+        else:
+            selected_id = st.selectbox(
+                "Select topic:",
+                options=[t.id for t in all_topics],
+                format_func=lambda tid: next(t.name for t in all_topics if t.id == tid),
+                key="edit_topic_select",
+            )
+            topic = next(t for t in all_topics if t.id == selected_id)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                edit_name = st.text_input("Name:", topic.name, key="edit_topic_name")
+                edit_category = st.text_input("Category:", topic.category or "", key="edit_topic_category")
+            with col2:
+                edit_area = st.text_input("Area:", topic.area or "", key="edit_topic_area")
+                edit_status = st.text_input("Status:", topic.status or "", key="edit_topic_status")
+            edit_justification = st.text_area(
+                "Business justification:", topic.business_justification or "", key="edit_topic_justification"
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Update Topic", key="update_topic_btn"):
+                    update_topic(
+                        selected_id,
+                        {
+                            "name": edit_name,
+                            "category": edit_category,
+                            "area": edit_area,
+                            "status": edit_status,
+                            "business_justification": edit_justification,
+                        },
+                    )
+                    st.success("Topic updated successfully!")
+                    st.rerun()
+            with col2:
+                if st.button("Delete Topic", key="delete_topic_btn"):
+                    delete_topic(selected_id)
+                    st.success("Topic deleted successfully!")
+                    st.rerun()
+
+# --- 3. Manage Costs ---
+with tab_costs:
+    all_topics = get_all_topics()
+
+    if not all_topics:
+        st.info("No topics available. Add a topic first.")
+    else:
+        selected_id = st.selectbox(
+            "Select topic:",
+            options=[t.id for t in all_topics],
+            format_func=lambda tid: next(t.name for t in all_topics if t.id == tid),
+            key="costs_topic_select",
+        )
+        topic = next(t for t in all_topics if t.id == selected_id)
+
+        breakdown = get_topic_cost_breakdown(selected_id)
+        col1, col2, col3, col4 = st.columns(4)
+        col1.metric("Internal", f"${breakdown['internal_personnel']:,.2f}")
+        col2.metric("External Tooling", f"${breakdown['external_tooling']:,.2f}")
+        col3.metric("Testing", f"${breakdown['testing']:,.2f}")
+        col4.metric("Recovery", f"${breakdown['recovery']:,.2f}")
+        st.markdown(f"### Total: ${breakdown['total']:,.2f}")
+
+        st.divider()
+
+        if is_admin:
+            st.subheader("Add cost item")
+            with st.form("add_cost_item_form"):
+                cost_type = st.selectbox("Cost type:", ["External Tooling", "Testing", "Recovery"])
+                amount = st.number_input("Amount ($):", value=0.0, format="%.2f", help="Use negative values for Recovery")
+                description = st.text_input("Description:", placeholder="e.g., Annual Jira license")
+
+                submitted = st.form_submit_button("Add Cost Item", type="primary")
+                if submitted:
+                    from models.cost_item import CostItem
+
+                    create_cost_item(CostItem(topic_id=selected_id, cost_type=cost_type, amount=amount, description=description))
+                    st.success("Cost item added!")
+                    st.rerun()
+
+            st.divider()
+            st.subheader("Cost items for this topic")
+            cost_items = get_cost_items_by_topic(selected_id)
+            if cost_items:
+                for item in cost_items:
+                    col1, col2, col3 = st.columns([2, 2, 1])
+                    col1.write(f"**{item.cost_type}** — {item.description or ''}")
+                    col2.write(f"${item.amount:,.2f}")
+                    with col3:
+                        if st.button("Delete", key=f"delete_cost_{item.id}"):
+                            delete_cost_item(item.id)
+                            st.success("Cost item deleted!")
+                            st.rerun()
+            else:
+                st.info("No cost items added yet.")
+        else:
+            st.warning("Only admins can add or edit cost items. Your role: " + st.session_state.user.role.value.capitalize())

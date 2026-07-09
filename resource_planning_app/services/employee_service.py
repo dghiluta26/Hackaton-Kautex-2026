@@ -23,15 +23,26 @@ def get_all_employees() -> list[Employee]:
 
 
 def get_employee_by_id(employee_id: int) -> Employee | None:
-    # TODO: return a single employee by id, or None if not found
-    raise NotImplementedError
+    with get_session() as session:
+        return session.get(Employee, employee_id)
 
 
-def update_employee(employee_id: int, updated_data: dict) -> Employee:
-    # TODO: update an existing employee's fields
-    raise NotImplementedError
+def update_employee(employee_id: int, updated_data: dict) -> Employee | None:
+    with get_session() as session:
+        employee = session.get(Employee, employee_id)
+        if employee is None:
+            return None
+        for key, value in updated_data.items():
+            setattr(employee, key, value)
+        session.add(employee)
+        session.commit()
+        session.refresh(employee)
+        return employee
 
 
 def delete_employee(employee_id: int) -> None:
-    # TODO: delete an employee from the database
-    raise NotImplementedError
+    with get_session() as session:
+        employee = session.get(Employee, employee_id)
+        if employee is not None:
+            session.delete(employee)
+            session.commit()
