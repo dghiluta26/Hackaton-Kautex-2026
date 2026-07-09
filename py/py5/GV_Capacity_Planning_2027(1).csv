@@ -1,0 +1,54 @@
+GV,,,,,,,,,,,
+,Location,"Available hours
+(per Region 100%)",Hourly rate,"Internal Efforts CI
+Non-bookable","Internal Efforts CI
+bookable 1","Internal D Projects
+1",Customer Request,"Allegro
+D-Project 1","Pentatonic
+D-Project 1",TOTAL AOP 2027,"Utilization
+Rate 2027"
+,,,,Other,Consulting Global,"Agentic AI and LLM-Powered
+Enterprise Solutions (Report
+Gen.) +DEVOPS",Fuel,"Creation of Test
+Standards","Method Development
+Pentatonic",,
+TOTAL,,,,,,,,,,,
+Internal hours,,,,,,,,,,,
+name,location,"1,600 hours/year",$1.00 Hourly rate,20%,0%,50%,0%,0%,0%,70%,80%
+name,location,"1,600 hours/year",$1.00 Hourly rate,10%,0%,50%,0%,0%,0%,60%,90%
+name,location,"1,600 hours/year",$1.00 Hourly rate,10%,10%,80%,0%,0%,0%,100%,90%
+name,location,"1,600 hours/year",$1.00 Hourly rate,10%,0%,140%,0%,0%,0%,150%,90%
+name,location,"1,600 hours/year",$1.00 Hourly rate,10%,0%,55%,0%,0%,0%,65%,90%
+name,location,"1,600 hours/year",$1.00 Hourly rate,60%,0%,75%,40%,0%,0%,175%,40%
+name,location,"1,600 hours/year",$1.00 Hourly rate,13%,0%,55%,87%,0%,0%,155%,87%
+Subtotal,,,,13%,0%,50%,87%,10%,0%,160%,87%
+Internal Costs,,,,,,,,,,,
+CAD,,,,-,-,-,-,-,-,-,
+GV CAE,,,,-,-,-,-,-,-,-,
+GV Test,,,,-,-,-,-,-,-,-,
+Sampling Bonn,,,,-,-,-,-,-,-,-,
+Sampling Pinghu,,,,-,-,-,-,-,-,-,
+Sampling Windsor,,,,-,-,-,-,-,-,-,
+PTF,,,,-,-,-,-,-,-,-,
+Internal Other,,,,-,-,-,-,-,-,-,
+Subtotal,,,,-,-,-,-,-,-,-,
+External Costs,,,,,,,,,,,
+Tooling,,,,-,-,-,-,-,"20,000","20,000",
+Sampling External,,,,-,-,-,-,-,-,-,
+External Other,,,,-,-,-,-,-,-,-,
+Subtotal,,,,-,-,-,-,-,"20,000","20,000",
+Recovery (Cost Recovery to be entered negative),,,,-,-,-,-,-,"20,000","20,000",
+,,,,,,,,,,,
+,,,,,,,,,,,
+Hourly rates,Hourly rate,hours/year,,,,,,,,,
+GV CAE Bonn,$1.00,"1,600",,,,,,,,,
+GV Test Bonn,$1.00,"1,600",,,,,,,,,
+GV CAE India,$1.00,"1,600",,,,,,,,,
+GV CAE Mexico,$1.00,"1,600",,,,,,,,,
+GV CAE Romania,$1.00,"1,600",,,,,,,,,
+GV CAE Pinghu,$1.00,"1,600",,,,,,,,,
+GV Test Romania,$1.00,"1,600",,,,,,,,,
+GV Test Troy,$1.00,"1,600",,,,,,,,,
+GV Test KGZ,$1.00,"1,600",,,,,,,,,
+GV Test Pinghu,$1.00,"1,600",,,,,,,,,
+GV Test Mexico,$1.00,"1,600",,,,,,,,,
