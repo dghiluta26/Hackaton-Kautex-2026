@@ -36,6 +36,7 @@ import streamlit as st
 # ============================================================
 st.set_page_config(
     page_title="Kautex Executive BI",
+    page_icon="🏭",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -313,20 +314,6 @@ globe = go.Figure(
         textfont=dict(color=palette.text, size=12),
         hovertemplate="<b>%{text}</b><extra></extra>",
     )
-)
-globe.update_geos(
-    projection_type="orthographic",
-    showland=True, landcolor=palette.surface,
-    showocean=True, oceancolor=palette.background,
-    showcountries=True, countrycolor=palette.border,
-    showcoastlines=True, coastlinecolor=palette.border,
-    bgcolor=palette.background,
-)
-globe.update_layout(
-    height=380,
-    margin=dict(l=0, r=0, t=0, b=0),
-    paper_bgcolor=palette.background,
-    dragmode="pan",
 )
 
 # plotly_events would give real click callbacks; keep this dep-free.
