@@ -1,4 +1,4 @@
-"""General dashboard: high-level overview of the resource plan."""
+﻿"""General dashboard: high-level overview of the resource plan."""
 
 import streamlit as st
 import pandas as pd
@@ -14,6 +14,107 @@ from app_theme import (
 from services.employee_service import get_all_employees
 from services.topic_service import get_all_topics
 from services.allocation_service import get_all_allocations
+
+def render_live_ticker(overallocated_count: int) -> None:
+    """Renders the animated Live Pulse Activity Ticker based on active resource risks."""
+    if overallocated_count > 0:
+        border_color = "#D92D20"  
+        dot_color = "#D92D20"
+        bg_badge = "#FEE2E2"
+        text_badge = "#991B1B"
+        badge_label = "Action Required"
+        message = f"<strong>Live System Update:</strong> {overallocated_count} employees currently exceed 100% standard allocation. Revision needed."
+    else:
+        border_color = "#10B981" 
+        dot_color = "#10B981"
+        bg_badge = "#ECFDF5"
+        text_badge = "#047857"
+        badge_label = "Optimal Status"
+        message = "<strong>Live System Update:</strong> All employee workloads are balanced within normal parameters."
+
+    st.markdown(
+        f"""
+        <style>
+            .ticker-wrapper {{
+                background: #FFFFFF;
+                border: 1px solid #D9E2EC;
+                border-left: 4px solid {border_color};
+                border-radius: 8px;
+                padding: 12px 16px;
+                margin-top: -8px;
+                margin-bottom: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                box-shadow: 0 4px 12px rgba(23, 32, 51, 0.04);
+            }}
+            .ticker-left {{
+                display: flex;
+                align-items: center;
+                gap: 12px;
+            }}
+            .pulse-container {{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 16px;
+                height: 16px;
+            }}
+            .pulse-dot {{
+                width: 10px;
+                height: 10px;
+                background: {dot_color};
+                border-radius: 50%;
+                box-shadow: 0 0 0 0 rgba(217, 45, 32, 0.5);
+                animation: pulse-animation-custom 1.6s infinite;
+            }}
+            @keyframes pulse-animation-custom {{
+                0% {{
+                    transform: scale(0.95);
+                    box-shadow: 0 0 0 0 {f"rgba(217, 45, 32, 0.5)" if overallocated_count > 0 else "rgba(16, 185, 129, 0.5)"};
+                }}
+                70% {{
+                    transform: scale(1);
+                    box-shadow: 0 0 0 8px rgba(217, 45, 32, 0);
+                }}
+                100% {{
+                    transform: scale(0.95);
+                    box-shadow: 0 0 0 0 rgba(217, 45, 32, 0);
+                }}
+            }}
+            .ticker-text {{
+                font-size: 14px;
+                color: #172033;
+                font-weight: 500;
+            }}
+            .ticker-badge {{
+                font-size: 11px;
+                font-weight: 700;
+                text-transform: uppercase;
+                background: {bg_badge};
+                color: {text_badge};
+                padding: 3px 8px;
+                border-radius: 4px;
+                letter-spacing: 0.05em;
+                white-space: nowrap;
+            }}
+        </style>
+        
+        <div class="ticker-wrapper">
+            <div class="ticker-left">
+                <div class="pulse-container">
+                    <div class="pulse-dot"></div>
+                </div>
+                <div class="ticker-text">{message}</div>
+            </div>
+            <div class="ticker-badge">
+                {badge_label}
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 
 inject_app_theme()
 render_kautex_header(
@@ -61,6 +162,14 @@ for emp in db_employees:
 df_employees = pd.DataFrame(employee_data)
 overallocated_count = len(df_employees[df_employees["total_utilization"] > 100])
 avg_utilization = df_employees["total_utilization"].mean() if not df_employees.empty else 0
+
+
+# =========================================================================
+# --- ADĂUGARE ACCESORIU DESIGN: LIVE PULSE TICKER ---
+# Se plasează exact între Header-ul principal și rândul de metrici
+# =========================================================================
+render_live_ticker(overallocated_count=overallocated_count)
+
 
 # --- 3. Top Metrics Row ---
 with st.container(horizontal=True):
