@@ -155,7 +155,8 @@ inject_app_theme()
 render_hero_header(
     "Digital resource, cost & portfolio dashboard",
     "Main working screen for allocation, utilization warnings and cost visibility.",
-    "General dashboard",
+    "Demo Kautex Hackathon  "
+    "(General dashboard)",
 )
 
 employees, topics, allocations, costs = load_sample_planning_data()
