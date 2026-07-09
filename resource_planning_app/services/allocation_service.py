@@ -1,38 +1,38 @@
-"""Service layer for Allocation CRUD operations.
+"""Service layer for Allocation CRUD operations."""
 
-This module will contain the functions used by the Allocation Matrix page
-to talk to the database. For now it only holds placeholders.
-"""
-
+from sqlmodel import select
 from database.connection import get_session
 from models.allocation import Allocation
 
-
-def create_allocation(allocation: Allocation) -> Allocation:
-    # TODO: add the allocation to the database and return the created record
-    raise NotImplementedError
-
-
 def get_all_allocations() -> list[Allocation]:
-    # TODO: return all allocations from the database
-    raise NotImplementedError
+    """Fetches all allocations from the database."""
+    with get_session() as session:
+        statement = select(Allocation)
+        return session.exec(statement).all()
 
+def upsert_allocation(employee_id: int, topic_id: int, percentage: float) -> None:
+    """Updates an existing allocation or creates a new one if it doesn't exist."""
+    with get_session() as session:
+        # Check if this employee is already assigned to this topic
+        statement = select(Allocation).where(
+            Allocation.employee_id == employee_id,
+            Allocation.topic_id == topic_id
+        )
+        existing_alloc = session.exec(statement).first()
 
-def get_allocations_by_employee(employee_id: int) -> list[Allocation]:
-    # TODO: return all allocations for a given employee
-    raise NotImplementedError
+        if existing_alloc:
+            # Update the percentage
+            existing_alloc.allocation_percentage = percentage
+            session.add(existing_alloc)
+        else:
+            # Create a brand new allocation
+            new_alloc = Allocation(
+                employee_id=employee_id,
+                topic_id=topic_id,
+                allocation_percentage=percentage
+            )
+            session.add(new_alloc)
 
+        session.commit()
 
-def get_allocations_by_topic(topic_id: int) -> list[Allocation]:
-    # TODO: return all allocations for a given topic
-    raise NotImplementedError
-
-
-def update_allocation(allocation_id: int, updated_data: dict) -> Allocation:
-    # TODO: update an existing allocation's fields
-    raise NotImplementedError
-
-
-def delete_allocation(allocation_id: int) -> None:
-    # TODO: delete an allocation from the database
-    raise NotImplementedError
+# (Leave the other placeholders below if you want, but we only need these two for the matrix)

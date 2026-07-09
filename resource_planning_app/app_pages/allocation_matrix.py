@@ -1,106 +1,109 @@
 """Allocation matrix page: assign employees to topics and check utilization."""
 
 import streamlit as st
+import pandas as pd
 
 from app_theme import (
-    TOPIC_COLUMNS,
-    build_planning_model,
     inject_app_theme,
-    load_sample_planning_data,
-    money_column,
-    percent_column,
     render_kautex_header,
+    percent_column,
     table_height,
-    utilization_chart,
+    utilization_chart
 )
 
+from services.employee_service import get_all_employees
+from services.topic_service import get_all_topics
+from services.allocation_service import get_all_allocations, upsert_allocation
 
 inject_app_theme()
 render_kautex_header(
     "Allocation matrix",
-    "Edit employee-to-topic percentages and immediately review utilization and cost impact.",
-    "Responsive editable table",
+    "Assign people to projects and instantly save the resource plan to the database.",
+    "Live Database Sync"
 )
 
-employees, topics, allocations, costs = load_sample_planning_data()
+# --- 1. Fetch Real Data ---
+db_employees = get_all_employees()
+db_topics = get_all_topics()
+db_allocations = get_all_allocations()
 
-st.markdown("### Allocation table")
-st.html(
-    '<div class="section-note">This frontend version uses sample data until allocation_service is implemented.</div>'
-)
+if not db_employees or not db_topics:
+    st.warning("⚠️ You need to import both Employees and Topics before using the Matrix.")
+    st.stop()
 
-matrix_input = employees[["employee", "team", "department", "location", "hours_per_year", "hourly_rate"]].merge(
-    allocations, on="employee", how="left"
-)
+# --- 2. Build the Dynamic Matrix ---
+topic_names = [t.name for t in db_topics]
+matrix_rows = []
 
-edited_matrix = st.data_editor(
-    matrix_input,
-    key="allocation_matrix_editor",
-    num_rows="fixed",
-    hide_index=True,
-    height=table_height(len(matrix_input), 360, 620),
-    disabled=["employee", "team", "department", "location", "hours_per_year", "hourly_rate"],
-    column_config={
-        "employee": st.column_config.TextColumn("Employee", pinned=True),
-        "team": "Team",
-        "department": "Department",
-        "location": "Location",
-        "hours_per_year": st.column_config.NumberColumn("Hours / year", format="%d"),
-        "hourly_rate": st.column_config.NumberColumn("Hourly rate", format="$ %.2f"),
-        **{topic: percent_column(topic, editable=True) for topic in TOPIC_COLUMNS},
-        "allocation_comment": st.column_config.TextColumn("Comment", width="large"),
-    },
-)
+for emp in db_employees:
+    # Set up the base employee data
+    row = {
+        "employee_id": emp.id,
+        "employee": emp.name,
+        "team": emp.team_id or "Unassigned",
+        "hours_per_year": emp.available_hours_per_year or 0.0,
+        "hourly_rate": emp.hourly_rate or 0.0,
+    }
+    # Default all topics to 0%
+    for topic in db_topics:
+        row[topic.name] = 0.0
+    matrix_rows.append(row)
 
-preview_allocations = edited_matrix[["employee", *TOPIC_COLUMNS, "allocation_comment"]].copy()
-preview_model, preview_topics, _ = build_planning_model(employees, topics, preview_allocations, costs)
+df_matrix = pd.DataFrame(matrix_rows)
 
-overallocated = int((preview_model["total_utilization"] > 100).sum())
-with st.container(horizontal=True):
-    st.metric("Employees in matrix", f"{len(preview_model)}", border=True)
-    st.metric("Average utilization", f"{preview_model['total_utilization'].mean():.0f}%", border=True)
-    st.metric("Overallocated employees", f"{overallocated}", delta="needs review" if overallocated else "clear", border=True)
-    st.metric("Preview total topic cost", f"$ {preview_topics['total_topic_cost'].sum():,.0f}", border=True)
+# Fill the matrix with existing allocations from the database
+for alloc in db_allocations:
+    emp = next((e for e in db_employees if e.id == alloc.employee_id), None)
+    topic = next((t for t in db_topics if t.id == alloc.topic_id), None)
+    if emp and topic:
+        df_matrix.loc[df_matrix["employee_id"] == emp.id, topic.name] = alloc.allocation_percentage
 
-left, right = st.columns([1, 1], vertical_alignment="top")
-with left:
-    with st.container(border=True):
-        st.markdown("**Utilization warnings**")
-        warning_view = preview_model[
-            ["employee", "team", "location", "total_utilization", "allocated_internal_cost", "risk"]
-        ].sort_values("total_utilization", ascending=False)
-        st.dataframe(
-            warning_view,
-            hide_index=True,
-            height=table_height(len(warning_view), 300, 480),
-            column_config={
-                "employee": st.column_config.TextColumn("Employee", pinned=True),
-                "total_utilization": st.column_config.ProgressColumn(
-                    "Utilization", min_value=0, max_value=160, format="%.0f%%"
-                ),
-                "allocated_internal_cost": money_column("Internal cost"),
-            },
-        )
+# --- 3. Configure the Interactive UI Columns ---
+col_config = {
+    "employee_id": None, # Hide the database ID from the user
+    "employee": st.column_config.TextColumn("Employee", pinned=True),
+    "team": "Team",
+    "hours_per_year": st.column_config.NumberColumn("Hours / year", format="%d"),
+    "hourly_rate": st.column_config.NumberColumn("Hourly rate", format="$ %.2f")
+}
 
-with right:
-    with st.container(border=True):
-        st.markdown("**Utilization chart**")
-        st.altair_chart(utilization_chart(preview_model), height=360)
+# Dynamically add all topics as editable percentage columns
+for t_name in topic_names:
+    col_config[t_name] = percent_column(t_name, editable=True)
 
-st.markdown("### Cost calculation by topic")
-st.dataframe(
-    preview_topics.sort_values("total_topic_cost", ascending=False),
-    hide_index=True,
-    height=table_height(len(preview_topics), 260, 460),
-    column_config={
-        "topic": st.column_config.TextColumn("Topic", pinned=True),
-        "employees_involved": st.column_config.NumberColumn("Employees", format="%d"),
-        "employee_internal_cost": money_column("Employee internal"),
-        "additional_internal_cost": money_column("Additional internal"),
-        "external_cost": money_column("External"),
-        "recovery": money_column("Recovery"),
-        "total_topic_cost": money_column("Total topic cost"),
-    },
-)
+# --- 4. Render the Data Editor & Save Button ---
+st.markdown("### Interactive Allocation Grid")
 
-st.caption("The table is intentionally frontend-only here. Hook it to allocation_service once CRUD is implemented.")
+with st.form("matrix_form"):
+    edited_df = st.data_editor(
+        df_matrix,
+        key="live_allocation_editor",
+        num_rows="fixed",
+        hide_index=True,
+        height=table_height(len(df_matrix), 360, 620),
+        disabled=["employee", "team", "hours_per_year", "hourly_rate"],
+        column_config=col_config,
+    )
+
+    submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
+
+    if submitted:
+        # When clicked, loop through the grid and save everything
+        for index, row in edited_df.iterrows():
+            emp_id = row["employee_id"]
+            for topic in db_topics:
+                percentage = row[topic.name]
+                upsert_allocation(emp_id, topic.id, float(percentage))
+
+        st.success("Allocations successfully saved!")
+        st.rerun()
+
+# --- 5. Live Chart ---
+st.divider()
+st.markdown("### Live Utilization Preview")
+
+# Calculate live utilization by summing up the topic columns
+edited_df["total_utilization"] = edited_df[topic_names].sum(axis=1)
+
+# Render the chart from app_theme
+st.altair_chart(utilization_chart(edited_df), use_container_width=True)
