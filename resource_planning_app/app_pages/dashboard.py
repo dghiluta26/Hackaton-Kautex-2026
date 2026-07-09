@@ -1,75 +1,86 @@
 """General dashboard: high-level overview of the resource plan."""
 
 import streamlit as st
+import pandas as pd
 
 from app_theme import (
-    build_planning_model,
     inject_app_theme,
-    load_sample_planning_data,
-    money_column,
     render_kautex_header,
+    money_column,
     table_height,
-    topic_cost_chart,
     utilization_chart,
 )
 
+from services.employee_service import get_all_employees
+from services.topic_service import get_all_topics
+from services.allocation_service import get_all_allocations
 
 inject_app_theme()
 render_kautex_header(
-    "Digital resource, cost & portfolio dashboard",
-    "Main working screen for allocation, utilization warnings and cost visibility.",
-    "General dashboard",
+    "Digital resource & cost dashboard",
+    "Live overview of employee utilization and projected internal costs.",
+    "Live Database Sync",
 )
 
-employees, topics, allocations, costs = load_sample_planning_data()
-model, topic_summary, team_summary = build_planning_model(employees, topics, allocations, costs)
+# --- 1. Fetch Real Data ---
+db_employees = get_all_employees()
+db_topics = get_all_topics()
+db_allocations = get_all_allocations()
 
-total_cost = topic_summary["total_topic_cost"].sum()
-overallocated = int((model["total_utilization"] > 100).sum())
-average_utilization = model["total_utilization"].mean()
+if not db_employees:
+    st.info("Please add employees and topics to view dashboard analytics.")
+    st.stop()
 
+# --- 2. Calculate Live Analytics ---
+employee_data = []
+total_internal_cost = 0
+
+for emp in db_employees:
+    # Find all allocations for this specific employee
+    emp_allocs = [a for a in db_allocations if a.employee_id == emp.id]
+
+    # Calculate total utilization percentage (e.g., 20% + 50% = 70%)
+    total_util = sum([a.allocation_percentage for a in emp_allocs])
+
+    # Calculate cost: (Hours * Rate) * (Utilization / 100)
+    emp_cost = (emp.available_hours_per_year * emp.hourly_rate) * (total_util / 100)
+    total_internal_cost += emp_cost
+
+    employee_data.append({
+        "employee": emp.name,
+        "team": emp.team_id or "Unassigned",
+        "department": emp.department_id or "Unassigned",
+        "location": emp.location_id or "Unassigned",
+        "hours_per_year": emp.available_hours_per_year,
+        "hourly_rate": emp.hourly_rate,
+        "total_utilization": total_util,
+        "allocated_internal_cost": emp_cost,
+        "risk": "Overallocated" if total_util > 100 else "OK"
+    })
+
+df_employees = pd.DataFrame(employee_data)
+overallocated_count = len(df_employees[df_employees["total_utilization"] > 100])
+avg_utilization = df_employees["total_utilization"].mean() if not df_employees.empty else 0
+
+# --- 3. Top Metrics Row ---
 with st.container(horizontal=True):
-    st.metric("Total employees", f"{len(model)}", border=True)
-    st.metric("Total topics", f"{len(topic_summary)}", border=True)
-    st.metric("Average utilization", f"{average_utilization:.0f}%", border=True)
-    st.metric("Total planning cost", f"$ {total_cost:,.0f}", border=True)
-    st.metric("Overallocated employees", f"{overallocated}", delta="needs review" if overallocated else "clear", border=True)
+    st.metric("Total employees", f"{len(db_employees)}", border=True)
+    st.metric("Total topics", f"{len(db_topics)}", border=True)
+    st.metric("Average utilization", f"{avg_utilization:.0f}%", border=True)
+    st.metric("Total internal cost", f"$ {total_internal_cost:,.0f}", border=True)
+    st.metric("Overallocated employees", f"{overallocated_count}", delta="needs review" if overallocated_count else "clear", border=True)
 
-st.markdown("### Planning overview")
-st.html(
-    '<div class="section-note">Inspired by the planning spreadsheet, but shaped as an interactive browser workflow.</div>'
-)
+# --- 4. Live Utilization Chart ---
+st.markdown("### Utilization by Employee")
+if not df_employees.empty:
+    st.altair_chart(utilization_chart(df_employees), use_container_width=True)
 
-chart_left, chart_right = st.columns([1.1, 1], vertical_alignment="top")
-with chart_left:
-    with st.container(border=True):
-        st.markdown("**Topic cost split**")
-        st.altair_chart(topic_cost_chart(topic_summary), height=330)
-
-with chart_right:
-    with st.container(border=True):
-        st.markdown("**Utilization by employee**")
-        st.altair_chart(utilization_chart(model), height=330)
-
-st.markdown("### Responsive employee planning table")
-employee_view = model[
-    [
-        "employee",
-        "team",
-        "department",
-        "location",
-        "hours_per_year",
-        "hourly_rate",
-        "total_utilization",
-        "allocated_internal_cost",
-        "risk",
-    ]
-].sort_values("total_utilization", ascending=False)
-
+# --- 5. Data Grid ---
+st.markdown("### Detailed Employee Breakdown")
 st.dataframe(
-    employee_view,
+    df_employees.sort_values("total_utilization", ascending=False),
     hide_index=True,
-    height=table_height(len(employee_view), 300, 540),
+    height=table_height(len(df_employees), 300, 540),
     column_config={
         "employee": st.column_config.TextColumn("Employee", pinned=True),
         "team": "Team",
@@ -84,36 +95,3 @@ st.dataframe(
         "risk": "Status",
     },
 )
-
-st.markdown("### Topic summary")
-st.dataframe(
-    topic_summary.sort_values("total_topic_cost", ascending=False),
-    hide_index=True,
-    height=table_height(len(topic_summary), 260, 430),
-    column_config={
-        "topic": st.column_config.TextColumn("Topic", pinned=True),
-        "employees_involved": st.column_config.NumberColumn("Employees", format="%d"),
-        "employee_internal_cost": money_column("Employee cost"),
-        "additional_internal_cost": money_column("Additional internal"),
-        "external_cost": money_column("External"),
-        "recovery": money_column("Recovery"),
-        "total_topic_cost": money_column("Total topic cost"),
-    },
-)
-
-with st.container(border=True):
-    st.markdown("**Team report preview**")
-    st.dataframe(
-        team_summary,
-        hide_index=True,
-        height=table_height(len(team_summary), 240, 420),
-        column_config={
-            "team": st.column_config.TextColumn("Team", pinned=True),
-            "team_members": st.column_config.NumberColumn("Members", format="%d"),
-            "average_utilization": st.column_config.ProgressColumn(
-                "Average utilization", min_value=0, max_value=160, format="%.0f%%"
-            ),
-            "total_internal_cost": money_column("Internal cost"),
-            "overallocated": st.column_config.NumberColumn("Above 100%", format="%d"),
-        },
-    )

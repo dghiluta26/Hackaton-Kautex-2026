@@ -1,0 +1,9 @@
+name,team,department,location,available_hours_per_year,hourly_rate,status
+Employee A,CAE Romania,CAE,Romania,1768,71.77,Active
+Employee B,CAE India,CAE,India,1816,49.55,Active
+Employee C,Test Bonn,Testing,Germany,1669,149.23,Active
+Employee D,Test Pinghu,Testing,China,1600,64.20,Replacement
+Employee E,Test Mexico,Testing,Mexico,1600,58.60,New position
+Employee F,Management,Management,Germany,1500,132.00,Active
+Employee G,CAE Romania,Internal Development,Romania,1768,83.40,Active
+Employee H,Sampling Pinghu,Sampling,China,1600,52.80,Temporary

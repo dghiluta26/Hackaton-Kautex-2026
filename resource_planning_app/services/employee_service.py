@@ -3,19 +3,23 @@
 This module will contain the functions used by the Employees page to talk
 to the database. For now it only holds placeholders.
 """
-
+from sqlmodel import select
 from database.connection import get_session
 from models.employee import Employee
 
-
 def create_employee(employee: Employee) -> Employee:
-    # TODO: add the employee to the database and return the created record
-    raise NotImplementedError
+    with get_session() as session:
+        session.add(employee)
+        session.commit()
+        session.refresh(employee)
+        return employee
 
 
 def get_all_employees() -> list[Employee]:
-    # TODO: return all employees from the database
-    raise NotImplementedError
+    with get_session() as session:
+        # This grabs every employee from the database
+        statement = select(Employee)
+        return session.exec(statement).all()
 
 
 def get_employee_by_id(employee_id: int) -> Employee | None:

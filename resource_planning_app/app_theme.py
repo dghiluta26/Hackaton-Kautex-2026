@@ -14,13 +14,7 @@ from utils.calculations import (
 )
 
 
-TOPIC_COLUMNS = [
-    "AI antimicrobial surfaces",
-    "Fuel tank standardization",
-    "Pneumatic D-projects",
-    "Customer request",
-    "Virtual validation",
-]
+#We deleted TOPIC_COLUMNS to remove hardcoding
 
 
 def inject_app_theme() -> None:
