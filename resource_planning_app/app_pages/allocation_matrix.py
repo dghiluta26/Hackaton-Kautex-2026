@@ -121,9 +121,6 @@ with tab_grid:
     st.markdown("### Interactive Allocation Grid")
 
     # Apply soft color coding flags to rows exceeding maximum load targets.
-    # st.data_editor does not support styled (Styler) DataFrames as editable
-    # input, so overloaded rows are surfaced in a read-only preview above the
-    # editor, and the editor itself always works on the raw (unstyled) data.
     def style_allocation_risk(row_data):
         if row_data["Total Utilization"] > 100:
             return ["background-color: #fce4d6; color: #c65911;"] * len(row_data)
@@ -156,7 +153,6 @@ with tab_grid:
         submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
 
         if submitted:
-            # Re-read raw edit inputs bypassing structural color styling wrappers
             for index, row in edited_df.iterrows():
                 emp_id = row["employee_id"]
                 for topic in db_topics:
@@ -222,6 +218,20 @@ with tab_single:
         remaining = 100 - current_total
         st.markdown("**Remaining capacity:**")
         st.info(f"{remaining:.1f}%")
+
+    # --- INTEGRATED FEATURE 2: SMART STAFFING RECOMMENDATION ENGINE ---
+    if remaining > 0:
+        allocated_topic_ids = {a.topic_id for a in db_allocations}
+        unstaffed_topics = [t for t in db_topics if t.id not in allocated_topic_ids]
+
+        if unstaffed_topics:
+            suggested_topic = unstaffed_topics[0]
+            st.info(
+                f"💡 **Smart Staffing Suggestion:**\n\n"
+                f"**{employee.name}** has **{remaining:.1f}%** idle capacity available. "
+                f"Consider allocating them to **{suggested_topic.name}**, "
+                f"which currently has **0%** total organizational resource coverage."
+            )
 
     st.divider()
     st.subheader("Add or update allocation")
