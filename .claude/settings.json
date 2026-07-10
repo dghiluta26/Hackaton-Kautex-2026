@@ -17,7 +17,18 @@
       "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\dedupe_topics.py\" --dry-run)",
       "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\dedupe_topics.py\")",
       "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_validate.py\")",
-      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_dedup_check.py\")"
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_dedup_check.py\")",
+      "Bash(python -m streamlit config show)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('resource_planning_app/app_theme.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('resource_planning_app/app.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_darkmode.py\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('resource_planning_app/app_pages/login.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('resource_planning_app/app_pages/dashboard.py', encoding='utf-8'\\).read\\(\\)\\)\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_darkmode2.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_darkmode_click.py\")",
+      "Bash(python -m compileall resource_planning_app)",
+      "Bash(timeout 20 python -m streamlit run app.py --server.headless true)",
+      "Bash(echo \"EXIT:$?\")"
     ]
   }
 }
