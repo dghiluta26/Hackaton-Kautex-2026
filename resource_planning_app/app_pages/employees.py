@@ -8,6 +8,7 @@ from app_theme import inject_app_theme, render_kautex_header
 from models.user import UserRole
 from models.employee import Employee
 from services.employee_service import create_employee, delete_employee, get_all_employees, update_employee
+from services.allocation_service import get_all_allocations
 
 # Security check
 if st.session_state.user.role != UserRole.ADMIN:
@@ -22,6 +23,16 @@ render_kautex_header(
 )
 
 all_employees = get_all_employees()
+
+# Utilization per employee, computed the same way as the Dashboard's Live
+# System Update ticker, so the "overallocated" flag stays in sync across pages.
+db_allocations = get_all_allocations()
+utilization_by_employee: dict[int, float] = {}
+for alloc in db_allocations:
+    utilization_by_employee[alloc.employee_id] = (
+        utilization_by_employee.get(alloc.employee_id, 0.0) + (alloc.allocation_percentage or 0.0)
+    )
+overallocated_ids = {emp.id for emp in all_employees if utilization_by_employee.get(emp.id, 0.0) > 100}
 
 # --- NEW: CORPORATE METRICS HIGHLIGHT ROW ---
 # This mirrors the clean executive dashboard summary cards seen on your landing page.
@@ -93,16 +104,36 @@ st.divider()
 # --- 3. Edit or Delete an Employee ---
 st.subheader("Edit or Delete Employee")
 
-if not all_employees:
+filter_overallocated = st.session_state.get("employees_filter_overallocated", False)
+if filter_overallocated and overallocated_ids:
+    editable_employees = [emp for emp in all_employees if emp.id in overallocated_ids]
+    st.warning(f"⚠️ Showing only the {len(editable_employees)} employee(s) flagged as overallocated from the Dashboard alert.")
+    if st.button("Show all employees", key="clear_overallocated_filter"):
+        st.session_state["employees_filter_overallocated"] = False
+        st.rerun()
+else:
+    if filter_overallocated:
+        # Flag was set but nothing is overallocated anymore (e.g. allocations changed) — fall back to full list.
+        st.session_state["employees_filter_overallocated"] = False
+    editable_employees = all_employees
+
+if not editable_employees:
     st.info("No employees yet.")
 else:
+    def _format_employee_option(eid: int) -> str:
+        emp = next((e for e in editable_employees if e.id == eid), None)
+        if emp is None:
+            return "Unknown"
+        util = utilization_by_employee.get(eid, 0.0)
+        return f"{emp.name} — ⚠ {util:.0f}% allocated" if util > 100 else emp.name
+
     # Safely select the precise unique database ID mapping
     selected_id = st.selectbox(
         "Select employee to edit/delete:",
-        options=[emp.id for emp in all_employees],
-        format_func=lambda eid: next((emp.name for emp in all_employees if emp.id == eid), "Unknown"),
+        options=[emp.id for emp in editable_employees],
+        format_func=_format_employee_option,
     )
-    employee = next(emp for emp in all_employees if emp.id == selected_id)
+    employee = next(emp for emp in editable_employees if emp.id == selected_id)
 
     col1, col2 = st.columns(2)
     with col1:

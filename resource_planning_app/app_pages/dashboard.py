@@ -12,6 +12,7 @@ from app_theme import (
     utilization_chart,
 )
 
+from models.user import UserRole
 from services.employee_service import get_all_employees
 from services.topic_service import get_all_topics
 from services.allocation_service import get_all_allocations
@@ -162,16 +163,19 @@ render_hero_header(
     "Demo Kautex Hackathon (General dashboard)",
 )
 
-# --- SIDEBAR INTERACTIVE WHAT-IF SIMULATIONS ---
-st.sidebar.header("Executive Simulations")
-rate_multiplier = st.sidebar.slider(
-    "Labor Rate Adjustment (%)",
-    min_value=80,
-    max_value=150,
-    value=100,
-    step=5,
-    help="Simulate the business cost impact of macro labor rate changes or currency adjustments."
-)
+# --- SIDEBAR INTERACTIVE WHAT-IF SIMULATIONS (admin only) ---
+if st.session_state.user.role == UserRole.ADMIN:
+    st.sidebar.header("Executive Simulations")
+    rate_multiplier = st.sidebar.slider(
+        "Labor Rate Adjustment (%)",
+        min_value=80,
+        max_value=150,
+        value=100,
+        step=5,
+        help="Simulate the business cost impact of macro labor rate changes or currency adjustments."
+    )
+else:
+    rate_multiplier = 100
 
 def render_live_ticker(overallocated_count: int) -> None:
     """Renders the animated Live Pulse Activity Ticker based on active resource risks."""
@@ -328,6 +332,11 @@ overallocated_count = len(df_employees[df_employees["total_utilization"] > 100])
 avg_utilization = df_employees["total_utilization"].mean() if not df_employees.empty else 0
 
 render_live_ticker(overallocated_count=overallocated_count)
+
+if overallocated_count > 0 and st.session_state.user.role == UserRole.ADMIN:
+    if st.button(f"Review {overallocated_count} overallocated employee(s) →", key="dash_review_overallocated"):
+        st.session_state["employees_filter_overallocated"] = True
+        st.switch_page("app_pages/employees.py")
 
 # --- 3. Top Metrics Row ---
 with st.container(horizontal=True):
