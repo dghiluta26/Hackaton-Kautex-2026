@@ -18,6 +18,10 @@ from services.export_service import (
 from services.import_service import import_allocations_from_csv, import_employees_from_csv, import_topics_from_csv
 from services.topic_service import get_all_topics
 
+# Fetch raw dataset references for interactive on-screen report previews
+from services.employee_service import get_all_employees
+from services.allocation_service import get_all_allocations
+
 inject_app_theme()
 render_kautex_header(
     "Reports & data management",
@@ -35,6 +39,43 @@ is_admin = st.session_state.user.role == UserRole.ADMIN
 # while the full-page rerun repaints.
 @st.fragment
 def render_export_tab() -> None:
+    # --- NEW: LIVE DATA PREVIEW GENERATOR ---
+    st.subheader("Interactive Export File Previews")
+    preview_type = st.radio(
+        "Select Dataset to Preview Before Generation:",
+        options=["Employees Roster", "Topics Pipeline", "Allocations Map"],
+        horizontal=True,
+    )
+
+    with st.expander(f"📋 Live Data Engine View: {preview_type}", expanded=True):
+        if preview_type == "Employees Roster":
+            emp_data = get_all_employees()
+            if emp_data:
+                df_p = pd.DataFrame([e.model_dump() for e in emp_data])
+                st.dataframe(df_p.head(5), use_container_width=True, hide_index=True)
+                st.caption(f"Showing top 5 rows of {len(df_p)} active records.")
+            else:
+                st.info("No employee records found to preview.")
+
+        elif preview_type == "Topics Pipeline":
+            top_data = get_all_topics()
+            if top_data:
+                df_p = pd.DataFrame([t.model_dump() for t in top_data])
+                st.dataframe(df_p.head(5), use_container_width=True, hide_index=True)
+                st.caption(f"Showing top 5 rows of {len(df_p)} active pipeline rows.")
+            else:
+                st.info("No topic records found to preview.")
+
+        else:
+            alloc_data = get_all_allocations()
+            if alloc_data:
+                df_p = pd.DataFrame([a.model_dump() for a in alloc_data])
+                st.dataframe(df_p.head(5), use_container_width=True, hide_index=True)
+                st.caption(f"Showing top 5 rows of {len(df_p)} calculated allocations.")
+            else:
+                st.info("No allocation records found to preview.")
+
+    st.divider()
     st.subheader("CSV exports")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -185,9 +226,37 @@ def render_report_tab() -> None:
         st.divider()
         st.subheader("Cost breakdown table")
         df_display = df_costs.rename(columns={"topic": "Topic", "total": "Total"}).copy()
-        for col in ["Internal", "External", "Recovery", "Total"]:
-            df_display[col] = df_display[col].apply(lambda x: f"${x:,.2f}")
-        st.dataframe(df_display, use_container_width=True, hide_index=True)
+
+        # --- NEW: EXECUTIVE COST MATRIX HEATMAP STYLING ---
+        # Sort values by total cost center impact for quick analysis
+        df_display = df_display.sort_values("Total", ascending=False)
+
+        # Highlight cost intensity relative to the largest total in view. Uses
+        # Styler.map (no matplotlib dependency) instead of background_gradient,
+        # which requires matplotlib and isn't in requirements.txt.
+        max_total = df_display["Total"].max() or 1.0
+
+        def style_cost_intensity(val):
+            try:
+                intensity = float(val) / max_total
+            except (TypeError, ValueError):
+                return ""
+            if intensity >= 0.66:
+                return "background-color: #2b6cb0; color: white; font-weight: bold;"
+            if intensity >= 0.33:
+                return "background-color: #bee3f8; color: #1a365d;"
+            return "background-color: #ebf8ff; color: #2c5282;"
+
+        styled_cost_df = df_display.style.map(
+            style_cost_intensity, subset=["Internal", "External", "Total"]
+        ).format({
+            "Internal": "${:,.2f}",
+            "External": "${:,.2f}",
+            "Recovery": "${:,.2f}",
+            "Total": "${:,.2f}"
+        })
+
+        st.dataframe(styled_cost_df, use_container_width=True, hide_index=True)
     else:
         st.info("No topics created yet.")
 

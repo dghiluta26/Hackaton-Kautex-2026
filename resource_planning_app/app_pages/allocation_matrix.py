@@ -40,14 +40,13 @@ if not db_employees or not db_topics:
 
 tab_grid, tab_single = st.tabs(["Allocation Grid", "Single Employee"])
 
-# --- Tab 1: Interactive Grid (unchanged) ---
+# --- Tab 1: Interactive Grid ---
 with tab_grid:
     # --- 2. Build the Dynamic Matrix ---
     topic_names = [t.name for t in db_topics]
     matrix_rows = []
 
     for emp in db_employees:
-        # Set up the base employee data
         row = {
             "employee_id": emp.id,
             "employee": emp.name,
@@ -55,7 +54,6 @@ with tab_grid:
             "hours_per_year": emp.available_hours_per_year or 0.0,
             "hourly_rate": emp.hourly_rate or 0.0,
         }
-        # Default all topics to 0%
         for topic in db_topics:
             row[topic.name] = 0.0
         matrix_rows.append(row)
@@ -69,37 +67,96 @@ with tab_grid:
         if emp and topic:
             df_matrix.loc[df_matrix["employee_id"] == emp.id, topic.name] = alloc.allocation_percentage
 
+    # Add a live tracking column for total utilization inside the grid preview
+    df_matrix["Total Utilization"] = df_matrix[topic_names].sum(axis=1)
+
+    # --- NEW: ADVANCED LIVE MATRIX CONTROLS & FILTERING ---
+    with st.expander("🔍 Filter Grid & Team Viewports", expanded=False):
+        f_col1, f_col2 = st.columns(2)
+        with f_col1:
+            search_emp = st.text_input("Find Employee:", placeholder="Type a name to isolate...")
+        with f_col2:
+            team_options = list(set(df_matrix["team"].tolist()))
+            selected_teams = st.multiselect("Isolate Specific Teams:", options=team_options, default=team_options)
+
+        # Apply filters seamlessly
+        filtered_matrix_df = df_matrix[
+            (df_matrix["employee"].str.contains(search_emp, case=False, na=False)) &
+            (df_matrix["team"].isin(selected_teams))
+        ]
+
+    # --- NEW: EXECUTIVE TOTAL CAPACITY METRIC SUMMARY ---
+    total_roster_count = len(filtered_matrix_df)
+    over_allocated_count = len(filtered_matrix_df[filtered_matrix_df["Total Utilization"] > 100])
+    avg_team_util = filtered_matrix_df["Total Utilization"].mean() if total_roster_count > 0 else 0
+
+    m_col1, m_col2, m_col3 = st.columns(3)
+    with m_col1:
+        st.metric("Filtered Headcount", f"{total_roster_count} Personnel")
+    with m_col2:
+        st.metric("Group Avg Utilization", f"{avg_team_util:.1f}%")
+    with m_col3:
+        st.metric(
+            "Over-allocated Staff",
+            f"{over_allocated_count} Critical",
+            delta="Overload Review" if over_allocated_count > 0 else "Balanced",
+            delta_color="inverse" if over_allocated_count > 0 else "normal"
+        )
+    st.divider()
+
     # --- 3. Configure the Interactive UI Columns ---
     col_config = {
-        "employee_id": None, # Hide the database ID from the user
+        "employee_id": None,
         "employee": st.column_config.TextColumn("Employee", pinned=True),
         "team": "Team",
         "hours_per_year": st.column_config.NumberColumn("Hours / year", format="%d"),
-        "hourly_rate": st.column_config.NumberColumn("Hourly rate", format="$ %.2f")
+        "hourly_rate": st.column_config.NumberColumn("Hourly rate", format="$ %.2f"),
+        "Total Utilization": st.column_config.ProgressColumn("Live Total Utilization", min_value=0, max_value=150, format="%.0f%%")
     }
 
-    # Dynamically add all topics as editable percentage columns
     for t_name in topic_names:
         col_config[t_name] = percent_column(t_name, editable=True)
 
-    # --- 4. Render the Data Editor & Save Button ---
+    # --- 4. Render the Data Editor with Cell Warnings ---
     st.markdown("### Interactive Allocation Grid")
+
+    # Apply soft color coding flags to rows exceeding maximum load targets.
+    # st.data_editor does not support styled (Styler) DataFrames as editable
+    # input, so overloaded rows are surfaced in a read-only preview above the
+    # editor, and the editor itself always works on the raw (unstyled) data.
+    def style_allocation_risk(row_data):
+        if row_data["Total Utilization"] > 100:
+            return ["background-color: #fce4d6; color: #c65911;"] * len(row_data)
+        elif row_data["Total Utilization"] == 0:
+            return ["background-color: #fafafa; color: #8c8c8c; font-style: italic;"] * len(row_data)
+        return [""] * len(row_data)
+
+    overloaded_df = filtered_matrix_df[filtered_matrix_df["Total Utilization"] > 100]
+    if not overloaded_df.empty:
+        st.warning(f"⚠️ {len(overloaded_df)} employee(s) in this view exceed 100% allocation.")
+        st.dataframe(
+            overloaded_df.style.apply(style_allocation_risk, axis=1),
+            hide_index=True,
+            use_container_width=True,
+            column_config=col_config,
+        )
 
     with st.form("matrix_form"):
         edited_df = st.data_editor(
-            df_matrix,
+            filtered_matrix_df,
             key="live_allocation_editor",
             num_rows="fixed",
             hide_index=True,
-            height=table_height(len(df_matrix), 360, 620),
-            disabled=["employee", "team", "hours_per_year", "hourly_rate"],
+            height=table_height(len(filtered_matrix_df), 360, 620),
+            disabled=["employee", "team", "hours_per_year", "hourly_rate", "Total Utilization"],
             column_config=col_config,
+            use_container_width=True
         )
 
         submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
 
         if submitted:
-            # When clicked, loop through the grid and save everything
+            # Re-read raw edit inputs bypassing structural color styling wrappers
             for index, row in edited_df.iterrows():
                 emp_id = row["employee_id"]
                 for topic in db_topics:
@@ -112,11 +169,7 @@ with tab_grid:
     # --- 5. Live Chart ---
     st.divider()
     st.markdown("### Live Utilization Preview")
-
-    # Calculate live utilization by summing up the topic columns
     edited_df["total_utilization"] = edited_df[topic_names].sum(axis=1)
-
-    # Render the chart from app_theme
     st.altair_chart(utilization_chart(edited_df), use_container_width=True)
 
 # --- Tab 2: Single Employee ---
