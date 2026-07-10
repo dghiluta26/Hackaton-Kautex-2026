@@ -7,7 +7,7 @@ Run with:
 from __future__ import annotations
 import streamlit as st
 
-from app_theme import inject_app_theme
+from app_theme import inject_app_theme, render_theme_toggle
 from database.connection import create_db_and_tables
 from models.user import UserRole
 
@@ -17,6 +17,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="auto",
 )
+render_theme_toggle()
 inject_app_theme()
 
 # Make sure the database and tables exist before the app is used.
