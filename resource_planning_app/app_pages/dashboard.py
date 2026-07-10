@@ -277,93 +277,6 @@ def render_live_ticker(overallocated_count: int) -> None:
     )
 
 
-db_employees = get_all_employees()
-db_topics = get_all_topics()
-db_allocations = get_all_allocations()
-
-if not db_employees:
-    st.info("Please add employees and topics to view dashboard analytics.")
-    st.stop()
-
-employee_data = []
-total_internal_cost = 0
-
-for emp in db_employees:
-    # Find all allocations for this specific employee
-    emp_allocs = [a for a in db_allocations if a.employee_id == emp.id]
-
-    # Calculate total utilization percentage (e.g., 20% + 50% = 70%)
-    total_util = sum([a.allocation_percentage for a in emp_allocs])
-
-    # Securizare impotriva valorilor None/lipsa din baza de date pentru a preveni crash-ul calculelor
-    hours = emp.available_hours_per_year if emp.available_hours_per_year is not None else 0
-    rate = emp.hourly_rate if emp.hourly_rate is not None else 0
-
-    # Calculate cost: (Hours * Rate) * (Utilization / 100)
-    emp_cost = (hours * rate) * (total_util / 100)
-    total_internal_cost += emp_cost
-
-    employee_data.append({
-        "employee": emp.name,
-        "team": emp.team_id or "Unassigned",
-        "department": emp.department_id or "Unassigned",
-        "location": emp.location_id or "Unassigned",
-        "hours_per_year": hours,
-        "hourly_rate": rate,
-        "total_utilization": total_util,
-        "allocated_internal_cost": emp_cost,
-        "risk": "Overallocated" if total_util > 100 else "OK"
-    })
-
-df_employees = pd.DataFrame(employee_data)
-overallocated_count = len(df_employees[df_employees["total_utilization"] > 100])
-avg_utilization = df_employees["total_utilization"].mean() if not df_employees.empty else 0
-
-render_live_ticker(overallocated_count=overallocated_count)
-
-
-with st.container(horizontal=True):
-    st.metric("Total employees", f"{len(db_employees)}", border=True)
-    st.metric("Total topics", f"{len(db_topics)}", border=True)
-    st.metric("Average utilization", f"{avg_utilization:.0f}%", border=True)
-    st.metric("Total internal cost", f"$ {total_internal_cost:,.0f}", border=True)
-    st.metric("Overallocated employees", f"{overallocated_count}", delta="needs review" if overallocated_count else "clear", border=True)
-
-st.markdown("### Utilization by Employee")
-if not df_employees.empty:
-    st.altair_chart(utilization_chart(df_employees), use_container_width=True)
-
-st.markdown("### Detailed Employee Breakdown")
-st.dataframe(
-    df_employees.sort_values("total_utilization", ascending=False),
-    hide_index=True,
-    height=table_height(len(df_employees), 300, 540),
-    column_config={
-        "employee": st.column_config.TextColumn("Employee", pinned=True),
-        "team": "Team",
-        "department": "Department",
-        "location": "Location",
-        "hours_per_year": st.column_config.NumberColumn("Hours / year", format="%d"),
-        "hourly_rate": st.column_config.NumberColumn("Hourly rate", format="$ %.2f"),
-        "total_utilization": st.column_config.ProgressColumn(
-            "Utilization", min_value=0, max_value=160, format="%.0f%%"
-        ),
-        "allocated_internal_cost": money_column("Employee internal cost"),
-        "risk": "Status",
-    },
-)
-inject_app_theme()
-render_hero_header(
-    "Digital resource, cost & portfolio dashboard",
-    "Main working screen for allocation, utilization warnings and cost visibility.",
-    "Demo Kautex Hackathon (General dashboard)",
-)
-
-from services.employee_service import get_all_employees
-from services.topic_service import get_all_topics
-from services.allocation_service import get_all_allocations
-
-
 # --- 1. Fetch Real Data ---
 db_employees = get_all_employees()
 db_topics = get_all_topics()
@@ -379,14 +292,21 @@ total_internal_cost = 0
 base_internal_cost = 0
 
 for emp in db_employees:
+    # Find all allocations for this specific employee
     emp_allocs = [a for a in db_allocations if a.employee_id == emp.id]
+
+    # Calculate total utilization percentage (e.g., 20% + 50% = 70%)
     total_util = sum([a.allocation_percentage for a in emp_allocs])
 
-    # Dynamic Simulation Modification Applied to calculations
-    simulated_rate = float(emp.hourly_rate or 0.0) * (rate_multiplier / 100)
+    # Securizare impotriva valorilor None/lipsa din baza de date pentru a preveni crash-ul calculelor
+    hours = emp.available_hours_per_year if emp.available_hours_per_year is not None else 0
+    rate = emp.hourly_rate if emp.hourly_rate is not None else 0
 
-    emp_cost_simulated = (emp.available_hours_per_year * simulated_rate) * (total_util / 100)
-    emp_cost_base = (emp.available_hours_per_year * emp.hourly_rate) * (total_util / 100)
+    # Dynamic Simulation Modification Applied to calculations
+    simulated_rate = rate * (rate_multiplier / 100)
+
+    emp_cost_simulated = (hours * simulated_rate) * (total_util / 100)
+    emp_cost_base = (hours * rate) * (total_util / 100)
 
     total_internal_cost += emp_cost_simulated
     base_internal_cost += emp_cost_base
@@ -396,7 +316,7 @@ for emp in db_employees:
         "team": emp.team_id or "Unassigned",
         "department": f"Dept {emp.department_id}" if emp.department_id else "Unassigned",
         "location": emp.location_id or "Unassigned",
-        "hours_per_year": emp.available_hours_per_year,
+        "hours_per_year": hours,
         "hourly_rate": simulated_rate,
         "total_utilization": total_util,
         "allocated_internal_cost": emp_cost_simulated,
@@ -406,6 +326,8 @@ for emp in db_employees:
 df_employees = pd.DataFrame(employee_data)
 overallocated_count = len(df_employees[df_employees["total_utilization"] > 100])
 avg_utilization = df_employees["total_utilization"].mean() if not df_employees.empty else 0
+
+render_live_ticker(overallocated_count=overallocated_count)
 
 # --- 3. Top Metrics Row ---
 with st.container(horizontal=True):
