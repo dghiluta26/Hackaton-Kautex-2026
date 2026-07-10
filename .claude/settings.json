@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_full_nav.py\")",
+      "Bash(grep -v \"^2026-\\\\|use_container_width\\\\|ScriptRunContext\\\\|will be removed\\\\|For \\\\`use_container\\\\|Traceback\\\\|File \\\\\"\\\\|pyarrow\\\\|check_status\\\\|raise e\\\\|arrays = \\\\|result = \\\\|^$\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_clear_filter.py\")",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\inspect_alex.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\check_dupe_topics.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\inspect_alex2.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\check_scope.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\plan_dedupe.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\ai_topic_detail.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\check_other_dupes.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\dedupe_topics.py\" --dry-run)",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\dedupe_topics.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_validate.py\")",
+      "Bash(PYTHONIOENCODING=utf-8 python \"C:\\\\Users\\\\denis\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-denis-OneDrive-Dokumenti-GitHub-Hackaton-Kautex-2026\\\\877350fb-f8c0-4afe-858a-dd73116a9b96\\\\scratchpad\\\\apptest_dedup_check.py\")"
+    ]
+  }
+}
