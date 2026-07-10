@@ -28,7 +28,7 @@ def render_theme_toggle() -> bool:
     only emits CSS and is safe to call from every page.
     """
     with st.sidebar:
-        dark = st.toggle("🌙 Dark mode", key="dark_mode")
+        dark = st.toggle("Dark mode", key="dark_mode")
     return dark
 
 
