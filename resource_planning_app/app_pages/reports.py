@@ -39,7 +39,7 @@ is_admin = st.session_state.user.role == UserRole.ADMIN
 # while the full-page rerun repaints.
 @st.fragment
 def render_export_tab() -> None:
-    # --- NEW: LIVE DATA PREVIEW GENERATOR ---
+    # --- LIVE DATA PREVIEW GENERATOR ---
     st.subheader("Interactive Export File Previews")
     preview_type = st.radio(
         "Select Dataset to Preview Before Generation:",
@@ -47,7 +47,7 @@ def render_export_tab() -> None:
         horizontal=True,
     )
 
-    with st.expander(f"📋 Live Data Engine View: {preview_type}", expanded=True):
+    with st.expander(f"Live Data Engine View: {preview_type}", expanded=True):
         if preview_type == "Employees Roster":
             emp_data = get_all_employees()
             if emp_data:
@@ -190,6 +190,38 @@ def render_report_tab() -> None:
     col2.metric("Total headcount", metrics["total_headcount"])
     col3.metric("Avg cost / employee", f"${metrics['average_cost_per_employee']:,.2f}")
 
+    # --- FEATURE 3 - BURNOUT STRESS-TEST SIMULATOR ---
+    st.divider()
+    st.subheader("Workload Stress-Test Simulator")
+    stress_multiplier = st.slider(
+        "Simulate Company Growth / Market Demand Spike:",
+        min_value=100,
+        max_value=175,
+        value=100,
+        step=5,
+        format="%d%% workload"
+    ) / 100.0
+
+    if stress_multiplier > 1.0:
+        db_allocs = get_all_allocations()
+        db_employees = get_all_employees()
+        overloaded_names = []
+
+        for emp in db_employees:
+            emp_allocs = [a.allocation_percentage for a in db_allocs if a.employee_id == emp.id]
+            simulated_total = sum(emp_allocs) * stress_multiplier
+            if simulated_total > 100:
+                overloaded_names.append(f"{emp.name} ({simulated_total:.0f}%)")
+
+        if overloaded_names:
+            st.error(
+                f"Critical Operational Risk: At a {stress_multiplier*100:.0f}% scaling spike, "
+                f"{len(overloaded_names)} core team members hit critical fatigue or severe overtime limits:\n\n"
+                f"• " + "\n• ".join(overloaded_names)
+            )
+        else:
+            st.success("Roster Resilience: The team can safely absorb this surge without breaking peak limits.")
+
     st.divider()
     st.subheader("Cost distribution by topic")
 
@@ -199,10 +231,10 @@ def render_report_tab() -> None:
         topic_costs.append(
             {
                 "topic": topic.name,
-                "Internal": cost["internal_personnel"],
-                "External": cost["external_tooling"] + cost["testing"],
-                "Recovery": cost["recovery"],
-                "total": cost["total"],
+                "Internal": cost["internal_personnel"] * stress_multiplier,
+                "External": (cost["external_tooling"] + cost["testing"]) * stress_multiplier,
+                "Recovery": cost["recovery"] * stress_multiplier,
+                "total": cost["total"] * stress_multiplier,
             }
         )
 
@@ -227,13 +259,8 @@ def render_report_tab() -> None:
         st.subheader("Cost breakdown table")
         df_display = df_costs.rename(columns={"topic": "Topic", "total": "Total"}).copy()
 
-        # --- NEW: EXECUTIVE COST MATRIX HEATMAP STYLING ---
-        # Sort values by total cost center impact for quick analysis
+        # --- EXECUTIVE COST MATRIX HEATMAP STYLING ---
         df_display = df_display.sort_values("Total", ascending=False)
-
-        # Highlight cost intensity relative to the largest total in view. Uses
-        # Styler.map (no matplotlib dependency) instead of background_gradient,
-        # which requires matplotlib and isn't in requirements.txt.
         max_total = df_display["Total"].max() or 1.0
 
         def style_cost_intensity(val):
@@ -257,6 +284,32 @@ def render_report_tab() -> None:
         })
 
         st.dataframe(styled_cost_df, use_container_width=True, hide_index=True)
+
+        # --- FEATURE 4 - BUDGET BURN-RATE THERMOMETER ---
+        st.write("")
+        st.subheader("Capital Consumption Index")
+        st.caption("Tracks simulated resource burn against a baseline threshold limit ($45,000 baseline per center).")
+
+        df_display["Cap Baseline"] = 45000.0
+        df_display["Burn %"] = (df_display["Total"] / df_display["Cap Baseline"]) * 100
+
+        thermo_chart = (
+            alt.Chart(df_display)
+            .mark_bar()
+            .encode(
+                x=alt.X("Total:Q", title="Allocated Resource Burn ($)"),
+                y=alt.Y("Topic:N", sort="-x", title=None),
+                color=alt.condition(
+                    alt.datum.Total > 45000,
+                    alt.value("#d9534f"), # Dangerous Overrun Crimson
+                    alt.value("#0275d8")  # Stable Allocation Safe Corporate Blue
+                ),
+                tooltip=["Topic", alt.Tooltip("Total:Q", format="$,.2f"), alt.Tooltip("Burn %:Q", format=".1f%%")]
+            )
+            .properties(height=250)
+        )
+        st.altair_chart(thermo_chart, use_container_width=True)
+
     else:
         st.info("No topics created yet.")
 
@@ -267,13 +320,16 @@ def render_report_tab() -> None:
     high_cost = get_high_cost_topics(threshold_percentage=0.3, breakdowns=breakdowns)
     if high_cost:
         for i, info in enumerate(high_cost):
+            sim_total = info['total_cost'] * stress_multiplier
+            sim_external = info['external_cost'] * stress_multiplier
+
             with st.expander(f"{info['name']} — {info['external_ratio'] * 100:.1f}% external", expanded=(i == 0)):
                 st.write(f"**Category:** {info['category']}")
                 if info["business_justification"]:
                     st.write(f"**Business justification:** {info['business_justification']}")
                 col1, col2, col3 = st.columns(3)
-                col1.metric("Total cost", f"${info['total_cost']:,.2f}")
-                col2.metric("External cost", f"${info['external_cost']:,.2f}")
+                col1.metric("Total cost", f"${sim_total:,.2f}")
+                col2.metric("External cost", f"${sim_external:,.2f}")
                 col3.metric("External %", f"{info['external_ratio'] * 100:.1f}%")
     else:
         st.info("All projects have reasonable external cost ratios.")
