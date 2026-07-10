@@ -1,7 +1,10 @@
 """Login page with unified account request functionality."""
 
 import streamlit as st
+from app_theme import is_dark_mode
 from services.auth_service import authenticate_user
+
+_muted_text_color = "#94A3B8" if is_dark_mode() else "#5b6470"
 
 # 1. Safely push the entire layout down into the vertical center
 st.markdown("""
@@ -31,7 +34,7 @@ with center_column:
             st.markdown("<br>", unsafe_allow_html=True)
             with st.expander("Need an account? Request access"):
                 st.markdown(
-                    "<div style='font-size: 13px; color: #5b6470; margin-bottom: 10px;'>"
+                    f"<div style='font-size: 13px; color: {_muted_text_color}; margin-bottom: 10px;'>"
                     "Self-service registration is disabled. Submit a request to the Kautex Craiova administration team to provision your workspace."
                     "</div>",
                     unsafe_allow_html=True

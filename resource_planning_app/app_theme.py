@@ -17,38 +17,149 @@ from utils.calculations import (
 #We deleted TOPIC_COLUMNS to remove hardcoding
 
 
+def is_dark_mode() -> bool:
+    """Whether the Kautex dark theme toggle is currently on."""
+    return bool(st.session_state.get("dark_mode", False))
+
+
+def render_theme_toggle() -> bool:
+    """Render the sidebar Light/Dark switch. Call this exactly once per run
+    (from app.py) since it's a stateful widget — inject_app_theme() itself
+    only emits CSS and is safe to call from every page.
+    """
+    with st.sidebar:
+        dark = st.toggle("🌙 Dark mode", key="dark_mode")
+    return dark
+
+
 def inject_app_theme() -> None:
+    dark = is_dark_mode()
+
+    if dark:
+        kautex_blue = "#38BDF8"
+        ink = "#E5E9F0"
+        muted = "#94A3B8"
+        line = "#2A3A55"
+        soft = "#16223A"
+        app_bg = "#0B1220"
+        card_bg = "#111C31"
+        metric_shadow = "rgba(0, 0, 0, 0.35)"
+        pill_border = "#2D5875"
+        pill_bg = "rgba(56, 189, 248, 0.12)"
+        pill_text = "#7DD3FC"
+    else:
+        kautex_blue = "#00A6DF"
+        ink = "#172033"
+        muted = "#667085"
+        line = "#D9E2EC"
+        soft = "#F4F6F9"
+        app_bg = "#f4f6f9"
+        card_bg = "#ffffff"
+        metric_shadow = "rgba(23, 32, 51, 0.06)"
+        pill_border = "#B7E5F6"
+        pill_bg = "#EAF8FD"
+        pill_text = "#0879A4"
+
+    native_widget_overrides = f"""
+            .stApp, [data-testid="stHeader"] {{
+                color: {ink};
+            }}
+
+            [data-testid="stHeader"] {{
+                background: {app_bg};
+            }}
+
+            [data-testid="stSidebar"] {{
+                background: {card_bg};
+                border-right: 1px solid {line};
+            }}
+
+            [data-testid="stSidebar"] * {{
+                color: {ink};
+            }}
+
+            [data-testid="stMetricLabel"], [data-testid="stMetricValue"], [data-testid="stMetricDelta"] {{
+                color: {ink} !important;
+            }}
+
+            .stApp p, .stApp span, .stApp label, .stApp li,
+            [data-testid="stMarkdownContainer"] {{
+                color: {ink};
+            }}
+
+            [data-testid="stCaptionContainer"] {{
+                color: {muted} !important;
+            }}
+
+            [data-testid="stTextInput"] input,
+            [data-testid="stNumberInput"] input,
+            [data-testid="stTextArea"] textarea,
+            [data-baseweb="select"] > div,
+            [data-baseweb="base-input"] {{
+                background: {soft} !important;
+                border-color: {line} !important;
+                color: {ink} !important;
+            }}
+
+            [data-testid="stForm"], [data-testid="stExpander"], [data-testid="stFileUploaderDropzone"] {{
+                background: {card_bg};
+                border-color: {line} !important;
+            }}
+
+            [data-testid="stDataFrame"], [data-testid="stTable"] {{
+                border: 1px solid {line};
+                border-radius: 8px;
+            }}
+
+            [data-testid="stBaseButton-secondary"], [data-testid="stBaseButton-tertiary"],
+            [data-testid="stFormSubmitButton"] button {{
+                background: {soft};
+                border-color: {line} !important;
+                color: {ink} !important;
+            }}
+
+            [data-testid="stTabs"] [data-baseweb="tab"] {{
+                color: {muted};
+            }}
+
+            [data-testid="stTabs"] [aria-selected="true"] {{
+                color: {kautex_blue} !important;
+            }}
+    """ if dark else ""
+
     st.html(
-        """
+        f"""
         <style>
-            :root {
-                --kautex-blue: #00A6DF;
-                --ink: #172033;
-                --muted: #667085;
-                --line: #D9E2EC;
-                --soft: #F4F6F9;
-            }
+            :root {{
+                --kautex-blue: {kautex_blue};
+                --ink: {ink};
+                --muted: {muted};
+                --line: {line};
+                --soft: {soft};
+            }}
 
-            .stApp {
-                background: #f4f6f9;
-            }
+            .stApp {{
+                background: {app_bg};
+            }}
 
-            .block-container {
+            .block-container {{
                 max-width: 1500px;
                 padding-top: 1.25rem;
                 padding-bottom: 2.5rem;
-            }
+            }}
 
-            [data-testid="stMetric"] {
-                background: #ffffff;
+            [data-testid="stMetric"] {{
+                background: {card_bg};
                 border: 1px solid var(--line);
                 border-radius: 8px;
                 padding: 14px 16px;
-                box-shadow: 0 10px 24px rgba(23, 32, 51, 0.06);
-            }
+                box-shadow: 0 10px 24px {metric_shadow};
+            }}
 
-            .kautex-hero {
-                background: #ffffff;
+            {native_widget_overrides}
+
+            .kautex-hero {{
+                background: {card_bg};
                 border: 1px solid var(--line);
                 border-radius: 8px;
                 padding: 18px 20px;
@@ -59,17 +170,17 @@ def inject_app_theme() -> None:
                 margin-bottom: 18px;
                 box-sizing: border-box;
                 width: 100%;
-            }
+            }}
 
-            .brand-lockup {
+            .brand-lockup {{
                 display: flex;
                 align-items: center;
                 gap: 16px;
                 min-width: 0;
                 width: 100%;
-            }
+            }}
 
-            .k-logo {
+            .k-logo {{
                 width: 52px;
                 height: 52px;
                 flex: 0 0 52px;
@@ -82,68 +193,68 @@ def inject_app_theme() -> None:
                 text-align: center;
                 border: 3px solid #ffffff;
                 outline: 2px solid var(--kautex-blue);
-            }
+            }}
 
-            .eyebrow {
+            .eyebrow {{
                 color: var(--kautex-blue);
                 font-size: 0.78rem;
                 font-weight: 800;
                 text-transform: uppercase;
                 letter-spacing: 0.08em;
                 margin-bottom: 2px;
-            }
+            }}
 
-            .hero-title {
+            .hero-title {{
                 color: var(--ink);
                 font-size: clamp(1.4rem, 3vw, 2.35rem);
                 font-weight: 850;
                 line-height: 1.05;
                 overflow-wrap: anywhere;
-            }
+            }}
 
             .hero-subtitle,
-            .section-note {
+            .section-note {{
                 color: var(--muted);
                 font-size: 0.95rem;
-            }
+            }}
 
-            .status-pill {
-                border: 1px solid #b7e5f6;
-                background: #eaf8fd;
-                color: #0879a4;
+            .status-pill {{
+                border: 1px solid {pill_border};
+                background: {pill_bg};
+                color: {pill_text};
                 padding: 8px 12px;
                 border-radius: 999px;
                 font-size: 0.82rem;
                 font-weight: 700;
                 white-space: nowrap;
-            }
+            }}
 
-            @media (max-width: 740px) {
-                [data-testid="stHorizontalBlock"] {
+            @media (max-width: 740px) {{
+                [data-testid="stHorizontalBlock"] {{
                     flex-wrap: wrap;
-                }
+                }}
 
-                [data-testid="stHorizontalBlock"] > div {
+                [data-testid="stHorizontalBlock"] > div {{
                     min-width: min(100%, 260px) !important;
                     flex: 1 1 260px !important;
-                }
+                }}
 
-                .kautex-hero {
+                .kautex-hero {{
                     align-items: flex-start;
                     flex-direction: column;
                     padding: 14px;
-                }
+                }}
 
-                .brand-lockup {
+                .brand-lockup {{
                     align-items: flex-start;
                     flex-direction: column;
                     gap: 10px;
-                }
+                }}
 
-                .status-pill {
+                .status-pill {{
                     white-space: normal;
-                }
-            }
+                }}
+            }}
         </style>
         """
     )

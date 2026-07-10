@@ -7,6 +7,7 @@ import pandas as pd
 
 from app_theme import (
     inject_app_theme,
+    is_dark_mode,
     money_column,
     table_height,
     utilization_chart,
@@ -179,11 +180,16 @@ else:
 
 def render_live_ticker(overallocated_count: int) -> None:
     """Renders the animated Live Pulse Activity Ticker based on active resource risks."""
+    dark = is_dark_mode()
+    ticker_bg = "#111C31" if dark else "#FFFFFF"
+    ticker_border = "#2A3A55" if dark else "#D9E2EC"
+    ticker_text = "#E5E9F0" if dark else "#172033"
+
     if overallocated_count > 0:
         border_color = "#D92D20"  # Rosu alerta
         dot_color = "#D92D20"
-        bg_badge = "#FEE2E2"
-        text_badge = "#991B1B"
+        bg_badge = "rgba(217, 45, 32, 0.18)" if dark else "#FEE2E2"
+        text_badge = "#FCA5A5" if dark else "#991B1B"
         badge_label = "Action Required"
         message = f"<strong>Live System Update:</strong> {overallocated_count} employees currently exceed 100% standard allocation. Revision needed."
         shadow_color = "rgba(217, 45, 32, 0.5)"
@@ -191,8 +197,8 @@ def render_live_ticker(overallocated_count: int) -> None:
     else:
         border_color = "#10B981"  # Verde optim
         dot_color = "#10B981"
-        bg_badge = "#ECFDF5"
-        text_badge = "#047857"
+        bg_badge = "rgba(16, 185, 129, 0.18)" if dark else "#ECFDF5"
+        text_badge = "#6EE7B7" if dark else "#047857"
         badge_label = "Optimal Status"
         message = "<strong>Live System Update:</strong> All employee workloads are balanced within normal parameters."
         shadow_color = "rgba(16, 185, 129, 0.5)"
@@ -202,8 +208,8 @@ def render_live_ticker(overallocated_count: int) -> None:
         f"""
         <style>
             .ticker-wrapper {{
-                background: #FFFFFF;
-                border: 1px solid #D9E2EC;
+                background: {ticker_bg};
+                border: 1px solid {ticker_border};
                 border-left: 4px solid {border_color};
                 border-radius: 8px;
                 padding: 12px 16px;
@@ -249,7 +255,7 @@ def render_live_ticker(overallocated_count: int) -> None:
             }}
             .ticker-text {{
                 font-size: 14px;
-                color: #172033;
+                color: {ticker_text};
                 font-weight: 500;
             }}
             .ticker-badge {{
