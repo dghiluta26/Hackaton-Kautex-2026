@@ -116,30 +116,30 @@ Hackaton-Kautex-2026/
 
 ### Features
 
-**Authentication & Roles**
+** Authentication & Roles**
 - Username/password login with `bcrypt` password hashing.
 - Self-service sign-up creates an **Employee**-role account; **Admin** accounts are
  seeded via `database/seed.py`.
 - Role-based navigation: Admins see an extra **Employees** management page; both roles
  see Dashboard, Topics, Allocation Matrix, and Reports.
 
-**Employee Management** (admin only)
+** Employee Management** (admin only)
 - Create, edit, and delete employee records: name, team, department, location,
  available hours/year, hourly rate, status, manager, notes.
 
-**Topic (Project) Management**
+** Topic (Project) Management**
 - Create, edit, and delete topics with category, area, objective, deliverables,
  business justification, status, and notes.
 - Mass-import topics from CSV.
 - Attach cost items to a topic (see below).
 
-**Allocation Matrix**
+** Allocation Matrix**
 - Assign any employee to any topic as a percentage of their capacity.
 - Live utilization tracking per employee across all their topic assignments.
 - Per-employee, per-topic cost computed automatically from hours, rate, and
  allocation percentage.
 
-**Multi-Level Cost Tracking**
+** Multi-Level Cost Tracking**
 Each topic's total cost is the sum of:
 ```
 Total Cost = Internal Personnel Cost      (Σ allocated hours × hourly rate)
@@ -152,11 +152,11 @@ Total Cost = Internal Personnel Cost      (Σ allocated hours × hourly rate)
 - "High-cost" topics (external costs above a configurable share of total cost) are
  automatically flagged for executive review.
 
-**Dashboard**
+** Dashboard**
 - Live headcount, total cost, and average cost-per-employee metrics.
 - Utilization charts and cost-distribution visualizations (Altair).
 
-**Reports — Export / Import**
+** Reports — Export / Import**
 - **Export:** Employees, Topics, and Allocations to CSV; a formatted Excel cost
  report; and an Excel allocation matrix.
 - **Import:** Bulk CSV upload for employees, topics, and allocations, with

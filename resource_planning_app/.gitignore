@@ -23,3 +23,5 @@ ENV/
 # IDE
 .vscode/
 .idea/
+
+.claude/
