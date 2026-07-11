@@ -70,7 +70,7 @@ with tab_grid:
     # Add a live tracking column for total utilization inside the grid preview
     df_matrix["Total Utilization"] = df_matrix[topic_names].sum(axis=1)
 
-    # --- NEW: ADVANCED LIVE MATRIX CONTROLS & FILTERING ---
+    # --- ADVANCED LIVE MATRIX CONTROLS & FILTERING ---
     with st.expander("🔍 Filter Grid & Team Viewports", expanded=False):
         f_col1, f_col2 = st.columns(2)
         with f_col1:
@@ -85,7 +85,7 @@ with tab_grid:
             (df_matrix["team"].isin(selected_teams))
         ]
 
-    # --- NEW: EXECUTIVE TOTAL CAPACITY METRIC SUMMARY ---
+    # --- EXECUTIVE TOTAL CAPACITY METRIC SUMMARY ---
     total_roster_count = len(filtered_matrix_df)
     over_allocated_count = len(filtered_matrix_df[filtered_matrix_df["Total Utilization"] > 100])
     avg_team_util = filtered_matrix_df["Total Utilization"].mean() if total_roster_count > 0 else 0
@@ -153,14 +153,28 @@ with tab_grid:
         submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
 
         if submitted:
-            for index, row in edited_df.iterrows():
-                emp_id = row["employee_id"]
-                for topic in db_topics:
-                    percentage = row[topic.name]
-                    upsert_allocation(emp_id, topic.id, float(percentage))
+            is_any_overallocated = False
+            overallocated_names = []
 
-            st.success("Allocations successfully saved!")
-            st.rerun()
+            for index, row in edited_df.iterrows():
+                emp_name = row["employee"]
+                total_new_utilization = sum(float(row[topic.name]) for topic in db_topics)
+                
+                if total_new_utilization > 100:
+                    is_any_overallocated = True
+                    overallocated_names.append(f"{emp_name} ({total_new_utilization:.0f}%)")
+
+            if is_any_overallocated:
+                st.error(f"❌ **Atenție: Salvare blocată!** Următorii angajați ar fi fost suprapuși (peste 100%): {', '.join(overallocated_names)}. Revizuiește orele înainte de stocare.")
+            else:
+                for index, row in edited_df.iterrows():
+                    emp_id = row["employee_id"]
+                    for topic in db_topics:
+                        percentage = row[topic.name]
+                        upsert_allocation(emp_id, topic.id, float(percentage))
+
+                st.success("Allocations successfully saved!")
+                st.rerun()
 
     # --- 5. Live Chart ---
     st.divider()
@@ -258,9 +272,15 @@ with tab_single:
     comment = st.text_input("Comment (why this allocation?):", placeholder="e.g., Lead developer for this project", key="single_alloc_comment")
 
     if st.button("Save Allocation", type="primary", key="single_save_alloc"):
-        upsert_allocation(selected_employee_id, selected_topic_id, allocation_pct, comment)
-        st.success("Allocation saved!")
-        st.rerun()
+        existing_topic_alloc = next((a.allocation_percentage for a in current_allocations if a.topic_id == selected_topic_id), 0.0)
+        potential_total = current_total - existing_topic_alloc + allocation_pct
+
+        if potential_total > 100:
+            st.error(f"❌ **Conflict de alocare!** Prin adăugarea a {allocation_pct}%, {employee.name} ar ajunge la un grad total de încărcare de {potential_total:.1f}%, depășind limita critică de 100%.")
+        else:
+            upsert_allocation(selected_employee_id, selected_topic_id, allocation_pct, comment)
+            st.success("Allocation saved!")
+            st.rerun()
 
     if current_allocations:
         st.divider()
