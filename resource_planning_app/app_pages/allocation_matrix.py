@@ -35,7 +35,7 @@ db_topics = get_all_topics()
 db_allocations = get_all_allocations()
 
 if not db_employees or not db_topics:
-    st.warning(" You need to import both Employees and Topics before using the Matrix.")
+    st.warning("⚠️ You need to import both Employees and Topics before using the Matrix.")
     st.stop()
 
 tab_grid, tab_single = st.tabs(["Allocation Grid", "Single Employee"])
@@ -71,7 +71,7 @@ with tab_grid:
     df_matrix["Total Utilization"] = df_matrix[topic_names].sum(axis=1)
 
     # --- ADVANCED LIVE MATRIX CONTROLS & FILTERING ---
-    with st.expander(" Filter Grid & Team Viewports", expanded=False):
+    with st.expander("🔍 Filter Grid & Team Viewports", expanded=False):
         f_col1, f_col2 = st.columns(2)
         with f_col1:
             search_emp = st.text_input("Find Employee:", placeholder="Type a name to isolate...")
@@ -120,6 +120,7 @@ with tab_grid:
     # --- 4. Render the Data Editor with Cell Warnings ---
     st.markdown("### Interactive Allocation Grid")
 
+    # Apply soft color coding flags to rows exceeding maximum load targets.
     def style_allocation_risk(row_data):
         if row_data["Total Utilization"] > 100:
             return ["background-color: #fce4d6; color: #c65911;"] * len(row_data)
@@ -129,7 +130,7 @@ with tab_grid:
 
     overloaded_df = filtered_matrix_df[filtered_matrix_df["Total Utilization"] > 100]
     if not overloaded_df.empty:
-        st.warning(f" {len(overloaded_df)} employee(s) in this view exceed 100% allocation.")
+        st.warning(f"⚠️ {len(overloaded_df)} employee(s) in this view exceed 100% allocation.")
         st.dataframe(
             overloaded_df.style.apply(style_allocation_risk, axis=1),
             hide_index=True,
@@ -164,7 +165,7 @@ with tab_grid:
                     overallocated_names.append(f"{emp_name} ({total_new_utilization:.0f}%)")
 
             if is_any_overallocated:
-                st.error(f" **Atenție: Salvare blocată!** Următorii angajați ar fi fost suprapuși (peste 100%): {', '.join(overallocated_names)}. Revizuiește orele înainte de stocare.")
+                st.error(f"❌ **Atenție: Salvare blocată!** Următorii angajați ar fi fost suprapuși (peste 100%): {', '.join(overallocated_names)}. Revizuiește orele înainte de stocare.")
             else:
                 for index, row in edited_df.iterrows():
                     emp_id = row["employee_id"]
@@ -232,6 +233,20 @@ with tab_single:
         st.markdown("**Remaining capacity:**")
         st.info(f"{remaining:.1f}%")
 
+    # --- INTEGRATED FEATURE 2: SMART STAFFING RECOMMENDATION ENGINE ---
+    if remaining > 0:
+        allocated_topic_ids = {a.topic_id for a in db_allocations}
+        unstaffed_topics = [t for t in db_topics if t.id not in allocated_topic_ids]
+
+        if unstaffed_topics:
+            suggested_topic = unstaffed_topics[0]
+            st.info(
+                f"💡 **Smart Staffing Suggestion:**\n\n"
+                f"**{employee.name}** has **{remaining:.1f}%** idle capacity available. "
+                f"Consider allocating them to **{suggested_topic.name}**, "
+                f"which currently has **0%** total organizational resource coverage."
+            )
+
     st.divider()
     st.subheader("Add or update allocation")
 
@@ -261,7 +276,7 @@ with tab_single:
         potential_total = current_total - existing_topic_alloc + allocation_pct
 
         if potential_total > 100:
-            st.error(f" **Conflict de alocare!** Prin adăugarea a {allocation_pct}%, {employee.name} ar ajunge la un grad total de încărcare de {potential_total:.1f}%, depășind limita critică de 100%.")
+            st.error(f"❌ **Conflict de alocare!** Prin adăugarea a {allocation_pct}%, {employee.name} ar ajunge la un grad total de încărcare de {potential_total:.1f}%, depășind limita critică de 100%.")
         else:
             upsert_allocation(selected_employee_id, selected_topic_id, allocation_pct, comment)
             st.success("Allocation saved!")
