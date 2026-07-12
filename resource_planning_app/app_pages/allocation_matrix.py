@@ -114,8 +114,12 @@ with tab_grid:
         "Total Utilization": st.column_config.ProgressColumn("Live Total Utilization", min_value=0, max_value=150, format="%.0f%%")
     }
 
+    # --- EDIT MODE TOGGLE FEATURE ---
+    is_edit_mode = st.toggle(" Enable Grid Editing", value=False, help="Turn on to modify allocation percentages.")
+
+    # If edit mode is OFF, we disable ALL topic columns dynamically.
     for t_name in topic_names:
-        col_config[t_name] = percent_column(t_name, editable=True)
+        col_config[t_name] = percent_column(t_name, editable=is_edit_mode)
 
     # --- 4. Render the Data Editor with Cell Warnings ---
     st.markdown("### Interactive Allocation Grid")
@@ -138,6 +142,10 @@ with tab_grid:
             column_config=col_config,
         )
 
+    # Determine disabled columns dynamically based on toggle state
+    base_disabled_cols = ["employee", "team", "hours_per_year", "hourly_rate", "Total Utilization"]
+    disabled_columns_list = base_disabled_cols if is_edit_mode else base_disabled_cols + topic_names
+
     # Data editor placed outside the form to catch live session_state changes
     edited_df = st.data_editor(
         filtered_matrix_df,
@@ -145,44 +153,48 @@ with tab_grid:
         num_rows="fixed",
         hide_index=True,
         height=table_height(len(filtered_matrix_df), 360, 620),
-        disabled=["employee", "team", "hours_per_year", "hourly_rate", "Total Utilization"],
+        disabled=disabled_columns_list,
         column_config=col_config,
         use_container_width=True
     )
 
-    with st.form("matrix_form", clear_on_submit=False):
-        
-        # Check for unsaved changes in the widget state
-        if "live_allocation_editor" in st.session_state:
-            session_changes = st.session_state["live_allocation_editor"]
-            if session_changes.get("edited_rows"):
-                st.warning("⚠️ You have unsaved changes in the grid. Please press the button below to secure your plan.")
+    # Only render the save form if the manager explicitly enabled edit mode
+    if is_edit_mode:
+        with st.form("matrix_form", clear_on_submit=False):
+            
+            # Check for unsaved changes in the widget state
+            if "live_allocation_editor" in st.session_state:
+                session_changes = st.session_state["live_allocation_editor"]
+                if session_changes.get("edited_rows"):
+                    st.warning("⚠️ You have unsaved changes in the grid. Please press the button below to secure your plan.")
 
-        submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
+            submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
 
-        if submitted:
-            is_any_overallocated = False
-            overallocated_names = []
+            if submitted:
+                is_any_overallocated = False
+                overallocated_names = []
 
-            for index, row in edited_df.iterrows():
-                emp_name = row["employee"]
-                total_new_utilization = sum(float(row[topic.name]) for topic in db_topics)
-                
-                if total_new_utilization > 100:
-                    is_any_overallocated = True
-                    overallocated_names.append(f"{emp_name} ({total_new_utilization:.0f}%)")
-
-            if is_any_overallocated:
-                st.error(f"❌ **Attention: Save blocked!** The following employees would have been overloaded (over 100%): {', '.join(overallocated_names)}. Please review the hours before storing.")
-            else:
                 for index, row in edited_df.iterrows():
-                    emp_id = row["employee_id"]
-                    for topic in db_topics:
-                        percentage = row[topic.name]
-                        upsert_allocation(emp_id, topic.id, float(percentage))
+                    emp_name = row["employee"]
+                    total_new_utilization = sum(float(row[topic.name]) for topic in db_topics)
+                    
+                    if total_new_utilization > 100:
+                        is_any_overallocated = True
+                        overallocated_names.append(f"{emp_name} ({total_new_utilization:.0f}%)")
 
-                st.success("Allocations successfully saved!")
-                st.rerun()
+                if is_any_overallocated:
+                    st.error(f"❌ **Attention: Save blocked!** The following employees would have been overloaded (over 100%): {', '.join(overallocated_names)}. Please review the hours before storing.")
+                else:
+                    for index, row in edited_df.iterrows():
+                        emp_id = row["employee_id"]
+                        for topic in db_topics:
+                            percentage = row[topic.name]
+                            upsert_allocation(emp_id, topic.id, float(percentage))
+
+                    st.success("Allocations successfully saved!")
+                    st.rerun()
+    else:
+        st.info(" Grid is currently in Read-Only mode. Toggle 'Enable Grid Editing' above to make adjustments.")
 
     # --- 5. Live Chart ---
     st.divider()
