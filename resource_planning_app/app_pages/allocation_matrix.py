@@ -236,10 +236,17 @@ with tab_single:
             st.warning(f"{current_total:.1f}% — unallocated")
         else:
             st.error(f"{current_total:.1f}% — target is 100%")
+            
     with col2:
         remaining = 100 - current_total
         st.markdown("**Remaining capacity:**")
-        st.info(f"{remaining:.1f}%")
+        # --- DYNAMIC INDICATOR FOR REMAINING CAPACITY ---
+        if remaining > 0:
+            st.success(f" {remaining:.1f}% available")
+        elif remaining == 0:
+            st.warning(f" {remaining:.1f}% (fully allocated)")
+        else:
+            st.error(f" {remaining:.1f}% (over-allocated!)")
 
     # --- INTEGRATED FEATURE 2: SMART STAFFING RECOMMENDATION ENGINE ---
     if remaining > 0:
