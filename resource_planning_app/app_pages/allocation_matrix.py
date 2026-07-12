@@ -138,17 +138,25 @@ with tab_grid:
             column_config=col_config,
         )
 
-    with st.form("matrix_form"):
-        edited_df = st.data_editor(
-            filtered_matrix_df,
-            key="live_allocation_editor",
-            num_rows="fixed",
-            hide_index=True,
-            height=table_height(len(filtered_matrix_df), 360, 620),
-            disabled=["employee", "team", "hours_per_year", "hourly_rate", "Total Utilization"],
-            column_config=col_config,
-            use_container_width=True
-        )
+    # Data editor placed outside the form to catch live session_state changes
+    edited_df = st.data_editor(
+        filtered_matrix_df,
+        key="live_allocation_editor",
+        num_rows="fixed",
+        hide_index=True,
+        height=table_height(len(filtered_matrix_df), 360, 620),
+        disabled=["employee", "team", "hours_per_year", "hourly_rate", "Total Utilization"],
+        column_config=col_config,
+        use_container_width=True
+    )
+
+    with st.form("matrix_form", clear_on_submit=False):
+        
+        # Check for unsaved changes in the widget state
+        if "live_allocation_editor" in st.session_state:
+            session_changes = st.session_state["live_allocation_editor"]
+            if session_changes.get("edited_rows"):
+                st.warning("⚠️ You have unsaved changes in the grid. Please press the button below to secure your plan.")
 
         submitted = st.form_submit_button("Save Matrix to Database", type="primary", use_container_width=True)
 
@@ -165,7 +173,7 @@ with tab_grid:
                     overallocated_names.append(f"{emp_name} ({total_new_utilization:.0f}%)")
 
             if is_any_overallocated:
-                st.error(f"❌ **Atenție: Salvare blocată!** Următorii angajați ar fi fost suprapuși (peste 100%): {', '.join(overallocated_names)}. Revizuiește orele înainte de stocare.")
+                st.error(f"❌ **Attention: Save blocked!** The following employees would have been overloaded (over 100%): {', '.join(overallocated_names)}. Please review the hours before storing.")
             else:
                 for index, row in edited_df.iterrows():
                     emp_id = row["employee_id"]
@@ -276,7 +284,7 @@ with tab_single:
         potential_total = current_total - existing_topic_alloc + allocation_pct
 
         if potential_total > 100:
-            st.error(f"❌ **Conflict de alocare!** Prin adăugarea a {allocation_pct}%, {employee.name} ar ajunge la un grad total de încărcare de {potential_total:.1f}%, depășind limita critică de 100%.")
+            st.error(f"❌ **Allocation conflict!** By adding {allocation_pct}%, {employee.name} would reach a total utilization of {potential_total:.1f}%, exceeding the critical limit of 100%.")
         else:
             upsert_allocation(selected_employee_id, selected_topic_id, allocation_pct, comment)
             st.success("Allocation saved!")
