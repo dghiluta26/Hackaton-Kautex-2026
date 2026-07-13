@@ -29,7 +29,6 @@ render_kautex_header(
     "Live Database Sync"
 )
 
-# --- 1. Fetch Real Data ---
 db_employees = get_all_employees()
 db_topics = get_all_topics()
 db_allocations = get_all_allocations()
@@ -42,7 +41,6 @@ tab_grid, tab_single = st.tabs(["Allocation Grid", "Single Employee"])
 
 # --- Tab 1: Interactive Grid ---
 with tab_grid:
-    # --- 2. Build the Dynamic Matrix ---
     topic_names = [t.name for t in db_topics]
     matrix_rows = []
 
@@ -67,10 +65,8 @@ with tab_grid:
         if emp and topic:
             df_matrix.loc[df_matrix["employee_id"] == emp.id, topic.name] = alloc.allocation_percentage
 
-    # Add a live tracking column for total utilization inside the grid preview
     df_matrix["Total Utilization"] = df_matrix[topic_names].sum(axis=1)
 
-    # --- ADVANCED LIVE MATRIX CONTROLS & FILTERING ---
     with st.expander("🔍 Filter Grid & Team Viewports", expanded=False):
         f_col1, f_col2 = st.columns(2)
         with f_col1:
@@ -79,13 +75,11 @@ with tab_grid:
             team_options = list(set(df_matrix["team"].tolist()))
             selected_teams = st.multiselect("Isolate Specific Teams:", options=team_options, default=team_options)
 
-        # Apply filters seamlessly
         filtered_matrix_df = df_matrix[
             (df_matrix["employee"].str.contains(search_emp, case=False, na=False)) &
             (df_matrix["team"].isin(selected_teams))
         ]
 
-    # --- EXECUTIVE TOTAL CAPACITY METRIC SUMMARY ---
     total_roster_count = len(filtered_matrix_df)
     over_allocated_count = len(filtered_matrix_df[filtered_matrix_df["Total Utilization"] > 100])
     avg_team_util = filtered_matrix_df["Total Utilization"].mean() if total_roster_count > 0 else 0
@@ -104,7 +98,6 @@ with tab_grid:
         )
     st.divider()
 
-    # --- 3. Configure the Interactive UI Columns ---
     col_config = {
         "employee_id": None,
         "employee": st.column_config.TextColumn("Employee", pinned=True),
@@ -114,17 +107,13 @@ with tab_grid:
         "Total Utilization": st.column_config.ProgressColumn("Live Total Utilization", min_value=0, max_value=150, format="%.0f%%")
     }
 
-    # --- EDIT MODE TOGGLE FEATURE ---
     is_edit_mode = st.toggle(" Enable Grid Editing", value=False, help="Turn on to modify allocation percentages.")
 
-    # If edit mode is OFF, we disable ALL topic columns dynamically.
     for t_name in topic_names:
         col_config[t_name] = percent_column(t_name, editable=is_edit_mode)
 
-    # --- 4. Render the Data Editor with Cell Warnings ---
     st.markdown("### Interactive Allocation Grid")
 
-    # Apply soft color coding flags to rows exceeding maximum load targets.
     def style_allocation_risk(row_data):
         if row_data["Total Utilization"] > 100:
             return ["background-color: #fce4d6; color: #c65911;"] * len(row_data)
@@ -142,11 +131,9 @@ with tab_grid:
             column_config=col_config,
         )
 
-    # Determine disabled columns dynamically based on toggle state
     base_disabled_cols = ["employee", "team", "hours_per_year", "hourly_rate", "Total Utilization"]
     disabled_columns_list = base_disabled_cols if is_edit_mode else base_disabled_cols + topic_names
 
-    # Data editor placed outside the form to catch live session_state changes
     edited_df = st.data_editor(
         filtered_matrix_df,
         key="live_allocation_editor",
@@ -158,11 +145,9 @@ with tab_grid:
         use_container_width=True
     )
 
-    # Only render the save form if the manager explicitly enabled edit mode
     if is_edit_mode:
         with st.form("matrix_form", clear_on_submit=False):
             
-            # Check for unsaved changes in the widget state
             if "live_allocation_editor" in st.session_state:
                 session_changes = st.session_state["live_allocation_editor"]
                 if session_changes.get("edited_rows"):
@@ -182,25 +167,32 @@ with tab_grid:
                         is_any_overallocated = True
                         overallocated_names.append(f"{emp_name} ({total_new_utilization:.0f}%)")
 
-                if is_any_overallocated:
-                    st.error(f"❌ **Attention: Save blocked!** The following employees would have been overloaded (over 100%): {', '.join(overallocated_names)}. Please review the hours before storing.")
-                else:
-                    for index, row in edited_df.iterrows():
-                        emp_id = row["employee_id"]
-                        for topic in db_topics:
-                            percentage = row[topic.name]
-                            upsert_allocation(emp_id, topic.id, float(percentage))
+                for index, row in edited_df.iterrows():
+                    emp_id = row["employee_id"]
+                    for topic in db_topics:
+                        percentage = row[topic.name]
+                        upsert_allocation(emp_id, topic.id, float(percentage))
 
-                    st.success("Allocations successfully saved!")
-                    st.rerun()
+                # Store status messages securely in session state
+                st.session_state["matrix_save_success"] = "Allocations successfully saved!"
+                if is_any_overallocated:
+                    st.session_state["matrix_save_warning"] = f"⚠️ **Attention:** Resource plan saved, but the following employees are now overallocated (over 100%): {', '.join(overallocated_names)}."
+                else:
+                    st.session_state.pop("matrix_save_warning", None)
+
+                st.rerun()
     else:
         st.info(" Grid is currently in Read-Only mode. Toggle 'Enable Grid Editing' above to make adjustments.")
 
-    # --- 5. Live Chart ---
     st.divider()
     st.markdown("### Live Utilization Preview")
     edited_df["total_utilization"] = edited_df[topic_names].sum(axis=1)
     st.altair_chart(utilization_chart(edited_df), use_container_width=True)
+
+    if "matrix_save_success" in st.session_state:
+        st.success(st.session_state.pop("matrix_save_success"))
+    if "matrix_save_warning" in st.session_state:
+        st.error(st.session_state.pop("matrix_save_warning"))
 
 # --- Tab 2: Single Employee ---
 with tab_single:
@@ -252,7 +244,6 @@ with tab_single:
     with col2:
         remaining = 100 - current_total
         st.markdown("**Remaining capacity:**")
-        # --- DYNAMIC INDICATOR FOR REMAINING CAPACITY ---
         if remaining > 0:
             st.success(f" {remaining:.1f}% available")
         elif remaining == 0:
@@ -260,7 +251,6 @@ with tab_single:
         else:
             st.error(f" {remaining:.1f}% (over-allocated!)")
 
-    # --- INTEGRATED FEATURE 2: SMART STAFFING RECOMMENDATION ENGINE ---
     if remaining > 0:
         allocated_topic_ids = {a.topic_id for a in db_allocations}
         unstaffed_topics = [t for t in db_topics if t.id not in allocated_topic_ids]
@@ -302,12 +292,15 @@ with tab_single:
         existing_topic_alloc = next((a.allocation_percentage for a in current_allocations if a.topic_id == selected_topic_id), 0.0)
         potential_total = current_total - existing_topic_alloc + allocation_pct
 
+        upsert_allocation(selected_employee_id, selected_topic_id, allocation_pct, comment)
+        st.session_state["single_save_success"] = "Allocation saved!"
+
         if potential_total > 100:
-            st.error(f"❌ **Allocation conflict!** By adding {allocation_pct}%, {employee.name} would reach a total utilization of {potential_total:.1f}%, exceeding the critical limit of 100%.")
+            st.session_state["single_save_warning"] = f"⚠️ **Attention:** Allocation successfully saved, but {employee.name} has now reached a total utilization of {potential_total:.1f}%, which exceeds the 100% capacity limit."
         else:
-            upsert_allocation(selected_employee_id, selected_topic_id, allocation_pct, comment)
-            st.success("Allocation saved!")
-            st.rerun()
+            st.session_state.pop("single_save_warning", None)
+
+        st.rerun()
 
     if current_allocations:
         st.divider()
@@ -325,5 +318,11 @@ with tab_single:
 
         if st.button("Delete Allocation", key="single_delete_btn"):
             delete_allocation(allocation_to_delete)
-            st.success("Allocation deleted!")
+            st.session_state["single_save_success"] = "Allocation deleted!"
+            st.session_state.pop("single_save_warning", None)
             st.rerun()
+
+    if "single_save_success" in st.session_state:
+        st.success(st.session_state.pop("single_save_success"))
+    if "single_save_warning" in st.session_state:
+        st.error(st.session_state.pop("single_save_warning"))
